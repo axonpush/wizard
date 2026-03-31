@@ -1,6 +1,6 @@
 {
   "name": "@axonpush/wizard",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "AI-powered wizard to integrate AxonPush into your AI agent project",
   "type": "module",
   "bin": {
@@ -12,22 +12,22 @@
     "skills"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsx src/bin.ts",
-    "start": "node dist/bin.js"
+    "build": "bun run scripts/build.ts",
+    "dev": "bun src/bin.ts",
+    "start": "bun dist/bin.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^0.2.20",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.87",
     "chalk": "^5.4.1",
     "ora": "^8.2.0",
     "prompts": "^2.4.2",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/prompts": "^2.4.9",
     "@types/yargs": "^17.0.33",
-    "tsup": "^8.4.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
 }

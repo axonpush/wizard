@@ -12,7 +12,7 @@ export async function runAgent(
   cwd: string,
   onStatus: (msg: string) => void,
 ): Promise<void> {
-  const { query } = await import("@anthropic-ai/claude-code");
+  const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
   const messages: AgentMessage[] = [];
 
@@ -32,18 +32,14 @@ export async function runAgent(
     },
   });
 
-  for await (const message of response) {
-    messages.push(message as AgentMessage);
+  for await (const msg of response) {
+    const m = msg as AgentMessage;
+    messages.push(m);
 
-    if ((message as AgentMessage).type === "assistant" && (message as AgentMessage).content) {
-      // Extract status lines (lines starting with [STATUS])
-      const content = String((message as AgentMessage).content);
-      const lines = content.split("\n");
-      for (const line of lines) {
+    if (m.type === "assistant" && m.content) {
+      for (const line of String(m.content).split("\n")) {
         const trimmed = line.trim();
-        if (trimmed) {
-          onStatus(trimmed);
-        }
+        if (trimmed) onStatus(trimmed);
       }
     }
   }

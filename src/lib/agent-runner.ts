@@ -1,8 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import type { FrameworkConfig } from "./framework-config.js";
 import type { PackageManager } from "./detection.js";
 import { runAgent } from "./agent-interface.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface RunnerOptions {
   config: FrameworkConfig;
@@ -13,22 +16,30 @@ export interface RunnerOptions {
   baseUrl: string;
 }
 
-function buildPrompt(opts: RunnerOptions): string {
-  const skillPath = path.resolve(__dirname, "..", "..", opts.config.skillDir, "SKILL.md");
-  let skillContent = "";
-  try {
-    skillContent = fs.readFileSync(skillPath, "utf-8");
-  } catch {
-    // skill file may not be bundled at __dirname in dev, try from cwd
-    const altPath = path.resolve(process.cwd(), opts.config.skillDir, "SKILL.md");
-    try { skillContent = fs.readFileSync(altPath, "utf-8"); } catch { /* no skill */ }
+function readSkill(skillDir: string): string {
+  const candidates = [
+    path.resolve(__dirname, "..", skillDir, "SKILL.md"),
+    path.resolve(process.cwd(), skillDir, "SKILL.md"),
+  ];
+  for (const p of candidates) {
+    try { return fs.readFileSync(p, "utf-8"); } catch {}
   }
+  return "";
+}
 
-  const pkgCmd = opts.packageManager === "uv"
-    ? `uv add "axonpush${opts.config.packageExtra ? `[${opts.config.packageExtra}]` : ""}"`
-    : opts.packageManager === "poetry"
-      ? `poetry add "axonpush${opts.config.packageExtra ? `[${opts.config.packageExtra}]` : ""}"`
-      : `pip install "axonpush${opts.config.packageExtra ? `[${opts.config.packageExtra}]` : ""}"`;
+function buildInstallCmd(pm: PackageManager, extra: string): string {
+  const pkg = extra ? `"axonpush[${extra}]"` : `"axonpush"`;
+  const cmds: Record<PackageManager, string> = {
+    uv: `uv add ${pkg}`,
+    poetry: `poetry add ${pkg}`,
+    pip: `pip install ${pkg}`,
+  };
+  return cmds[pm];
+}
+
+function buildPrompt(opts: RunnerOptions): string {
+  const skillContent = readSkill(opts.config.skillDir);
+  const pkgCmd = buildInstallCmd(opts.packageManager, opts.config.packageExtra);
 
   return `You are integrating the AxonPush Python SDK into this project.
 
