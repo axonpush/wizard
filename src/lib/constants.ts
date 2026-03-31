@@ -14,4 +14,4 @@ export const INTEGRATION_LABELS: Record<Integration, string> = {
   [Integration.core]: "Core SDK (no framework)",
 };
 
-export const DEFAULT_BASE_URL = "http://localhost:3000";
+export const DEFAULT_BASE_URL = "https://api.axonpush.xyz";

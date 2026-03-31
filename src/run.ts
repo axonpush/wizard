@@ -5,6 +5,7 @@ import { Integration, INTEGRATION_LABELS, DEFAULT_BASE_URL } from "./lib/constan
 import { FRAMEWORK_REGISTRY } from "./lib/registry.js";
 import { detectFrameworks, detectPackageManager } from "./lib/detection.js";
 import { agentRunner } from "./lib/agent-runner.js";
+import { browserAuth } from "./lib/browser-auth.js";
 
 interface WizardArgs {
   integration?: string;
@@ -66,9 +67,33 @@ export async function run(args: WizardArgs): Promise<void> {
   let baseUrl = args.baseUrl || DEFAULT_BASE_URL;
 
   if (!apiKey) {
-    const res = await prompts({ type: "password", name: "value", message: "AxonPush API Key" });
-    apiKey = res.value;
-    if (!apiKey) process.exit(0);
+    const { method } = await prompts({
+      type: "select",
+      name: "method",
+      message: "How would you like to authenticate?",
+      choices: [
+        { title: "Log in via browser (recommended)", value: "browser" },
+        { title: "Enter API key manually", value: "manual" },
+      ],
+    });
+    if (!method) process.exit(0);
+
+    if (method === "browser") {
+      console.log(chalk.dim("\n  Opening browser...\n"));
+      try {
+        const result = await browserAuth();
+        apiKey = result.apiKey;
+        tenantId = result.tenantId;
+        console.log(chalk.green("  Authenticated via browser!\n"));
+      } catch (err) {
+        console.log(chalk.red(`  ${err instanceof Error ? err.message : err}`));
+        process.exit(1);
+      }
+    } else {
+      const res = await prompts({ type: "password", name: "value", message: "AxonPush API Key" });
+      apiKey = res.value;
+      if (!apiKey) process.exit(0);
+    }
   }
 
   if (!tenantId) {
@@ -111,6 +136,6 @@ export async function run(args: WizardArgs): Promise<void> {
   console.log();
   console.log(chalk.green("  Next steps:"));
   console.log(chalk.dim("    1. Run your agent and check the AxonPush dashboard"));
-  console.log(chalk.dim(`    2. View traces at ${baseUrl.replace("3000", "5173")}/traces`));
+  console.log(chalk.dim("    2. View traces at https://axonpush.xyz/traces"));
   console.log();
 }

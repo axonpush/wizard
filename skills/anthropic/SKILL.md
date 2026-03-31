@@ -22,7 +22,7 @@ from axonpush.integrations.anthropic import AxonPushAnthropicTracer
 axonpush_client = AxonPush(
     api_key=os.environ["AXONPUSH_API_KEY"],
     tenant_id=os.environ["AXONPUSH_TENANT_ID"],
-    base_url=os.environ.get("AXONPUSH_BASE_URL", "http://localhost:3000"),
+    base_url=os.environ.get("AXONPUSH_BASE_URL", "https://api.axonpush.xyz"),
 )
 
 tracer = AxonPushAnthropicTracer(
