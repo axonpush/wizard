@@ -14,6 +14,8 @@ export interface RunnerOptions {
   apiKey: string;
   tenantId: string;
   baseUrl: string;
+  appId: number;
+  channelId: number;
 }
 
 function readSkill(skillDir: string): string {
@@ -53,6 +55,7 @@ function buildPrompt(opts: RunnerOptions): string {
 - AXONPUSH_API_KEY=${opts.apiKey}
 - AXONPUSH_TENANT_ID=${opts.tenantId}
 - AXONPUSH_BASE_URL=${opts.baseUrl}
+- AXONPUSH_CHANNEL_ID=${opts.channelId}
 
 ## Steps
 
@@ -68,6 +71,7 @@ function buildPrompt(opts: RunnerOptions): string {
    - app.py, main.py, agent.py, or similar
 
 4. Add AxonPush integration code following the reference below.
+   Use channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]) everywhere a channel_id is needed. Never hardcode channel IDs.
 
 5. Make sure os is imported if using os.environ.
 

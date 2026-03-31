@@ -27,7 +27,7 @@ axonpush_client = AsyncAxonPush(
 
 axonpush_hooks = AxonPushRunHooks(
     client=axonpush_client,
-    channel_id=1,  # Replace with your channel ID
+    channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]),
 )
 
 # Usage:
@@ -37,7 +37,7 @@ axonpush_hooks = AxonPushRunHooks(
 ## Steps
 
 1. Install `axonpush[openai-agents]` using the project's package manager
-2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL to .env
+2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL, AXONPUSH_CHANNEL_ID to .env
 3. Find the main file where Runner.run() is called
 4. Add the imports and AsyncAxonPush client (this SDK is async-only)
 5. Pass `hooks=axonpush_hooks` to `Runner.run()`

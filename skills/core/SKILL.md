@@ -28,7 +28,7 @@ axonpush_client = AxonPush(
 # axonpush_client.events.publish(
 #     identifier="my.event",
 #     payload={"key": "value"},
-#     channel_id=1,
+#     channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]),
 #     agent_id="my-agent",
 #     event_type=EventType.CUSTOM,
 # )
@@ -37,7 +37,7 @@ axonpush_client = AxonPush(
 ## Steps
 
 1. Install `axonpush` using the project's package manager
-2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL to .env
+2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL, AXONPUSH_CHANNEL_ID to .env
 3. Find the main entry point of the project
 4. Add imports and create the client as a module-level singleton
 5. Add example publish calls at key points (e.g., start, end, error handling)

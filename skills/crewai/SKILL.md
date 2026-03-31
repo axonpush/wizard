@@ -27,7 +27,7 @@ axonpush_client = AxonPush(
 
 axonpush_callbacks = AxonPushCrewCallbacks(
     client=axonpush_client,
-    channel_id=1,  # Replace with your channel ID
+    channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]),
     agent_id="crewai",
 )
 
@@ -46,7 +46,7 @@ axonpush_callbacks = AxonPushCrewCallbacks(
 ## Steps
 
 1. Install `axonpush[crewai]` using the project's package manager
-2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL to .env
+2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL, AXONPUSH_CHANNEL_ID to .env
 3. Find the file where `Crew(...)` is instantiated
 4. Add imports and create the callbacks object
 5. Add `step_callback=axonpush_callbacks.on_step` and `task_callback=axonpush_callbacks.on_task_complete` to `Crew()`

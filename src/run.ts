@@ -1,3 +1,4 @@
+import path from "path";
 import prompts from "prompts";
 import chalk from "chalk";
 import ora from "ora";
@@ -6,6 +7,7 @@ import { FRAMEWORK_REGISTRY } from "./lib/registry.js";
 import { detectFrameworks, detectPackageManager } from "./lib/detection.js";
 import { agentRunner } from "./lib/agent-runner.js";
 import { browserAuth } from "./lib/browser-auth.js";
+import { getOrCreateApp, createChannel } from "./lib/axonpush-api.js";
 
 interface WizardArgs {
   integration?: string;
@@ -17,6 +19,7 @@ interface WizardArgs {
 
 export async function run(args: WizardArgs): Promise<void> {
   const projectDir = args.installDir || process.cwd();
+  const projectName = path.basename(projectDir);
 
   console.log();
   console.log(chalk.bold("  AxonPush Wizard"));
@@ -37,25 +40,13 @@ export async function run(args: WizardArgs): Promise<void> {
       integration = detected[0];
       console.log(chalk.green(`  Detected: ${INTEGRATION_LABELS[integration]}\n`));
     } else if (detected.length > 1) {
-      console.log(chalk.yellow(`  Multiple frameworks detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}\n`));
-      const { choice } = await prompts({
-        type: "select",
-        name: "choice",
-        message: "Which framework integration?",
-        choices: detected.map((d) => ({ title: INTEGRATION_LABELS[d], value: d })),
-      });
-      if (!choice) process.exit(0);
-      integration = choice;
+      integration = Integration.core;
+      console.log(chalk.yellow(`  Multiple frameworks detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}`));
+      console.log(chalk.dim(`  Using bare SDK integration\n`));
     } else {
-      console.log(chalk.yellow("  No AI framework detected.\n"));
-      const { choice } = await prompts({
-        type: "select",
-        name: "choice",
-        message: "Choose an integration",
-        choices: Object.entries(INTEGRATION_LABELS).map(([value, title]) => ({ title, value })),
-      });
-      if (!choice) process.exit(0);
-      integration = choice;
+      integration = Integration.core;
+      console.log(chalk.yellow("  No supported framework detected"));
+      console.log(chalk.dim(`  Using bare SDK integration\n`));
     }
   }
 
@@ -107,7 +98,27 @@ export async function run(args: WizardArgs): Promise<void> {
     baseUrl = res.value || DEFAULT_BASE_URL;
   }
 
-  // 3. Run agent
+  // 3. Provision app and channel
+  const apiOpts = { apiKey, tenantId, baseUrl };
+  const provisionSpinner = ora("Configuring AxonPush app and channel...").start();
+
+  let appId: number;
+  let channelId: number;
+  try {
+    const appName = projectName.length >= 5 ? projectName : `${projectName}-app`;
+    const channelName = integration.length >= 5 ? integration : `${integration}-events`;
+    const app = await getOrCreateApp(apiOpts, appName);
+    const channel = await createChannel(apiOpts, channelName, app.id);
+    appId = app.id;
+    channelId = channel.id;
+    provisionSpinner.succeed(`App "${app.name}" → channel "${channel.name}" (id: ${channel.id})`);
+  } catch (error) {
+    provisionSpinner.fail("Failed to configure app/channel");
+    console.error(chalk.red(`\n  ${error instanceof Error ? error.message : error}`));
+    process.exit(1);
+  }
+
+  // 4. Run agent
   console.log();
   const spinner = ora("Running Claude Code agent...").start();
 
@@ -120,6 +131,8 @@ export async function run(args: WizardArgs): Promise<void> {
         apiKey,
         tenantId,
         baseUrl,
+        appId,
+        channelId,
       },
       (msg) => {
         spinner.text = msg;
@@ -132,7 +145,7 @@ export async function run(args: WizardArgs): Promise<void> {
     process.exit(1);
   }
 
-  // 4. Outro
+  // 5. Outro
   console.log();
   console.log(chalk.green("  Next steps:"));
   console.log(chalk.dim("    1. Run your agent and check the AxonPush dashboard"));

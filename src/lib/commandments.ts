@@ -12,7 +12,7 @@ const COMMANDMENTS = [
   "For CrewAI: add step_callback=callbacks.on_step and task_callback=callbacks.on_task_complete to Crew().",
   "Always import os at the top if using os.environ for credentials.",
   "Create the AxonPush client as a module-level singleton, not inside each function call.",
-  "Use channel_id=1 as placeholder if no channel ID is provided.",
+  "Use int(os.environ['AXONPUSH_CHANNEL_ID']) for channel_id. Never hardcode channel IDs.",
   "When done, briefly summarize what files were changed and what the user should do next.",
 ];
 

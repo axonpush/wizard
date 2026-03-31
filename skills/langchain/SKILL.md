@@ -27,7 +27,7 @@ axonpush_client = AxonPush(
 
 axonpush_handler = AxonPushCallbackHandler(
     client=axonpush_client,
-    channel_id=1,  # Replace with your channel ID
+    channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]),
     agent_id="my-agent",
 )
 
@@ -41,7 +41,7 @@ axonpush_handler = AxonPushCallbackHandler(
 ## Steps
 
 1. Install `axonpush[langchain]` using the project's package manager
-2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL to .env
+2. Add AXONPUSH_API_KEY, AXONPUSH_TENANT_ID, AXONPUSH_BASE_URL, AXONPUSH_CHANNEL_ID to .env
 3. Find the main file where chains/agents are invoked
 4. Add the imports and client initialization (as module-level code)
 5. Add `config={"callbacks": [axonpush_handler]}` to `.invoke()` calls
