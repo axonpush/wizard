@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { load as loadToml } from "js-toml";
 import { Integration } from "./constants.js";
 import { FRAMEWORK_REGISTRY } from "./registry.js";
 
@@ -36,10 +37,16 @@ function readDependencies(dir: string): Set<string> {
   // pyproject.toml
   const pyproject = path.join(dir, "pyproject.toml");
   if (fs.existsSync(pyproject)) {
-    const content = fs.readFileSync(pyproject, "utf-8");
-    // Simple regex to extract dependency names from pyproject.toml
-    const depMatches = content.matchAll(/["']([a-zA-Z0-9_-]+)(?:\[.*?\])?(?:[><=!~].*)?\s*["']/g);
-    for (const m of depMatches) deps.add(m[1].toLowerCase());
+    try {
+      const content = fs.readFileSync(pyproject, "utf-8");
+      const parsed = loadToml(content) as Record<string, unknown>;
+      const project = parsed.project as Record<string, unknown> | undefined;
+      const depList = (project?.dependencies as string[]) ?? [];
+      for (const dep of depList) {
+        const name = dep.split(/[><=!~\[;]/)[0].trim().toLowerCase();
+        if (name) deps.add(name);
+      }
+    } catch { /* malformed toml, skip */ }
   }
 
   // requirements.txt

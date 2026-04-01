@@ -8,14 +8,12 @@ import { runAgent } from "./agent-interface.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface RunnerOptions {
-  config: FrameworkConfig;
+  configs: FrameworkConfig[];
   projectDir: string;
   packageManager: PackageManager;
   apiKey: string;
   tenantId: string;
   baseUrl: string;
-  appId: number;
-  channelId: number;
 }
 
 function readSkill(skillDir: string): string {
@@ -29,8 +27,9 @@ function readSkill(skillDir: string): string {
   return "";
 }
 
-function buildInstallCmd(pm: PackageManager, extra: string): string {
-  const pkg = extra ? `"axonpush[${extra}]"` : `"axonpush"`;
+function buildInstallCmd(pm: PackageManager, extras: string[]): string {
+  const filtered = extras.filter(Boolean);
+  const pkg = filtered.length > 0 ? `"axonpush[${filtered.join(",")}]"` : `"axonpush"`;
   const cmds: Record<PackageManager, string> = {
     uv: `uv add ${pkg}`,
     poetry: `poetry add ${pkg}`,
@@ -40,44 +39,72 @@ function buildInstallCmd(pm: PackageManager, extra: string): string {
 }
 
 function buildPrompt(opts: RunnerOptions): string {
-  const skillContent = readSkill(opts.config.skillDir);
-  const pkgCmd = buildInstallCmd(opts.packageManager, opts.config.packageExtra);
+  const extras = opts.configs.map((c) => c.packageExtra);
+  const pkgCmd = buildInstallCmd(opts.packageManager, extras);
+  const frameworkNames = opts.configs.map((c) => c.name).join(", ");
+
+  const frameworkSections = opts.configs
+    .map((c) => {
+      const skill = readSkill(c.skillDir);
+      return `### ${c.name}
+- Integration hint: ${c.prompts.integrationHint}
+${skill ? `\n#### Skill Reference: ${c.name}\n\n${skill}` : ""}`;
+    })
+    .join("\n\n");
 
   return `You are integrating the AxonPush Python SDK into this project.
 
 ## Project Info
 - Directory: ${opts.projectDir}
 - Package manager: ${opts.packageManager}
-- Framework: ${opts.config.name}
-- Integration hint: ${opts.config.prompts.integrationHint}
+- Frameworks detected: ${frameworkNames}
 
-## Credentials (use these in .env)
-- AXONPUSH_API_KEY=${opts.apiKey}
-- AXONPUSH_TENANT_ID=${opts.tenantId}
-- AXONPUSH_BASE_URL=${opts.baseUrl}
-- AXONPUSH_CHANNEL_ID=${opts.channelId}
+## AxonPush API Helper
+
+A helper script is available at \`.axonpush-api-helper.mjs\` in the project root. Use it via Bash to create apps and channels:
+
+\`\`\`bash
+node .axonpush-api-helper.mjs list-apps
+node .axonpush-api-helper.mjs create-app <name>
+node .axonpush-api-helper.mjs list-channels <appId>
+node .axonpush-api-helper.mjs create-channel <name> <appId>
+\`\`\`
+
+All commands return JSON.
 
 ## Steps
 
-1. Install the SDK:
+1. **Analyze the codebase.** Explore the project structure, entry points, modules, and agent/chain definitions. Understand the different logical areas of the codebase.
+
+2. **Create an AxonPush app** using the helper. Use a descriptive name based on the project.
+
+3. **Create channels** using the helper. Create as many channels as makes sense for the project's structure. Consider:
+   - Separate channels per framework (e.g. LangChain vs OpenAI Agents)
+   - Separate channels per logical module, service, or agent (e.g. "rag-pipeline", "chat-agent", "data-ingestion")
+   - Separate channels for different environments or concerns if applicable
+
+   Use descriptive, lowercase, hyphenated names (5-30 chars). Each channel name must be at least 5 characters.
+
+4. **Install the SDK:**
    Run: ${pkgCmd}
 
-2. Create or update .env in the project root with the credentials above.
+5. **Update .env** in the project root with credentials and channel IDs:
+   - AXONPUSH_API_KEY=${opts.apiKey}
+   - AXONPUSH_TENANT_ID=${opts.tenantId}
+   - AXONPUSH_BASE_URL=${opts.baseUrl}
+   - Add a channel ID env var for each channel you created (e.g. AXONPUSH_CHANNEL_ID_RAG=5)
+
    If .env already exists, append the AXONPUSH_ variables (don't overwrite existing vars).
 
-3. Find the main agent/chain entry point in the project. Look for:
-   - Files importing ${opts.config.detection.imports[0] || "the AI framework"}
-   - Files with main() or if __name__ == "__main__"
-   - app.py, main.py, agent.py, or similar
+6. **Integrate the SDK** into each relevant entry point, using the appropriate channel ID env var.
+   Never hardcode channel IDs — always read from os.environ.
+   Make sure os is imported if using os.environ.
 
-4. Add AxonPush integration code following the reference below.
-   Use channel_id=int(os.environ["AXONPUSH_CHANNEL_ID"]) everywhere a channel_id is needed. Never hardcode channel IDs.
+## Frameworks
 
-5. Make sure os is imported if using os.environ.
+${frameworkSections}
 
-${skillContent ? `## Skill Reference\n\n${skillContent}` : ""}
-
-When done, summarize what you changed.`;
+When done, summarize: what app and channels you created, and what code you changed.`;
 }
 
 export async function agentRunner(

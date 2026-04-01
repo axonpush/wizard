@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import prompts from "prompts";
 import chalk from "chalk";
 import ora from "ora";
@@ -7,7 +8,43 @@ import { FRAMEWORK_REGISTRY } from "./lib/registry.js";
 import { detectFrameworks, detectPackageManager } from "./lib/detection.js";
 import { agentRunner } from "./lib/agent-runner.js";
 import { browserAuth } from "./lib/browser-auth.js";
-import { getOrCreateApp, createChannel } from "./lib/axonpush-api.js";
+
+function buildApiHelper(opts: { apiKey: string; tenantId: string; baseUrl: string }): string {
+  return `// Temporary helper — created by AxonPush Wizard, deleted after agent run.
+// Usage:
+//   node .axonpush-api-helper.mjs list-apps
+//   node .axonpush-api-helper.mjs create-app <name>
+//   node .axonpush-api-helper.mjs list-channels <appId>
+//   node .axonpush-api-helper.mjs create-channel <name> <appId>
+
+const BASE = ${JSON.stringify(opts.baseUrl)};
+const HEADERS = {
+  "X-API-Key": ${JSON.stringify(opts.apiKey)},
+  "x-tenant-id": ${JSON.stringify(opts.tenantId)},
+  "Content-Type": "application/json",
+};
+
+async function api(method, path, body) {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: HEADERS,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  if (!res.ok) { console.error("ERROR", res.status, text); process.exit(1); }
+  try { console.log(JSON.stringify(JSON.parse(text), null, 2)); } catch { console.log(text); }
+}
+
+const [,, cmd, ...args] = process.argv;
+switch (cmd) {
+  case "list-apps":      api("GET",  "/apps"); break;
+  case "create-app":     api("POST", "/apps", { name: args[0] }); break;
+  case "list-channels":  api("GET",  "/channel?appId=" + args[0]); break;
+  case "create-channel": api("POST", "/channel", { name: args[0], appId: Number(args[1]) }); break;
+  default: console.error("Unknown command:", cmd); process.exit(1);
+}
+`;
+}
 
 interface WizardArgs {
   integration?: string;
@@ -25,32 +62,28 @@ export async function run(args: WizardArgs): Promise<void> {
   console.log(chalk.bold("  AxonPush Wizard"));
   console.log(chalk.dim("  AI-powered SDK integration\n"));
 
-  // 1. Detect framework
-  let integration: Integration;
+  // 1. Detect frameworks
+  let integrations: Integration[];
   if (args.integration && args.integration in Integration) {
-    integration = args.integration as Integration;
-    console.log(chalk.green(`  Framework: ${INTEGRATION_LABELS[integration]} (from flag)`));
+    integrations = [args.integration as Integration];
+    console.log(chalk.green(`  Framework: ${INTEGRATION_LABELS[integrations[0]]} (from flag)`));
   } else {
     const detected = detectFrameworks(projectDir);
     const pkgMgr = detectPackageManager(projectDir);
     console.log(chalk.dim(`  Project: ${projectDir}`));
     console.log(chalk.dim(`  Package manager: ${pkgMgr}`));
 
-    if (detected.length === 1) {
-      integration = detected[0];
-      console.log(chalk.green(`  Detected: ${INTEGRATION_LABELS[integration]}\n`));
-    } else if (detected.length > 1) {
-      integration = Integration.core;
-      console.log(chalk.yellow(`  Multiple frameworks detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}`));
-      console.log(chalk.dim(`  Using bare SDK integration\n`));
+    if (detected.length > 0) {
+      integrations = detected;
+      console.log(chalk.green(`  Detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}\n`));
     } else {
-      integration = Integration.core;
+      integrations = [Integration.core];
       console.log(chalk.yellow("  No supported framework detected"));
       console.log(chalk.dim(`  Using bare SDK integration\n`));
     }
   }
 
-  const config = FRAMEWORK_REGISTRY[integration];
+  const configs = integrations.map((i) => FRAMEWORK_REGISTRY[i]);
 
   // 2. Gather credentials
   let apiKey = args.apiKey;
@@ -98,41 +131,24 @@ export async function run(args: WizardArgs): Promise<void> {
     baseUrl = res.value || DEFAULT_BASE_URL;
   }
 
-  // 3. Provision app and channel
-  const apiOpts = { apiKey, tenantId, baseUrl };
-  const provisionSpinner = ora("Configuring AxonPush app and channel...").start();
+  // 3. Write API helper script for the agent to use
+  const helperPath = path.join(projectDir, ".axonpush-api-helper.mjs");
+  const helperScript = buildApiHelper({ apiKey, tenantId, baseUrl });
+  fs.writeFileSync(helperPath, helperScript);
 
-  let appId: number;
-  let channelId: number;
-  try {
-    const appName = projectName.length >= 5 ? projectName : `${projectName}-app`;
-    const channelName = integration.length >= 5 ? integration : `${integration}-events`;
-    const app = await getOrCreateApp(apiOpts, appName);
-    const channel = await createChannel(apiOpts, channelName, app.id);
-    appId = app.id;
-    channelId = channel.id;
-    provisionSpinner.succeed(`App "${app.name}" → channel "${channel.name}" (id: ${channel.id})`);
-  } catch (error) {
-    provisionSpinner.fail("Failed to configure app/channel");
-    console.error(chalk.red(`\n  ${error instanceof Error ? error.message : error}`));
-    process.exit(1);
-  }
-
-  // 4. Run agent
+  // 4. Run agent — it will analyze the codebase, create apps/channels, and integrate
   console.log();
   const spinner = ora("Running Claude Code agent...").start();
 
   try {
     await agentRunner(
       {
-        config,
+        configs,
         projectDir,
         packageManager: detectPackageManager(projectDir),
         apiKey,
         tenantId,
         baseUrl,
-        appId,
-        channelId,
       },
       (msg) => {
         spinner.text = msg;
@@ -143,6 +159,9 @@ export async function run(args: WizardArgs): Promise<void> {
     spinner.fail("Agent failed");
     console.error(chalk.red(`\n  ${error instanceof Error ? error.message : error}`));
     process.exit(1);
+  } finally {
+    // Clean up helper script
+    try { fs.unlinkSync(helperPath); } catch {}
   }
 
   // 5. Outro
