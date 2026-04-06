@@ -3,7 +3,8 @@ export enum Integration {
   openaiAgents = "openai-agents",
   anthropic = "anthropic",
   crewai = "crewai",
-  core = "core",
+  deepAgents = "deepagents",
+  custom = "custom",
 }
 
 export const INTEGRATION_LABELS: Record<Integration, string> = {
@@ -11,7 +12,8 @@ export const INTEGRATION_LABELS: Record<Integration, string> = {
   [Integration.openaiAgents]: "OpenAI Agents SDK",
   [Integration.anthropic]: "Anthropic / Claude",
   [Integration.crewai]: "CrewAI",
-  [Integration.core]: "Core SDK (no framework)",
+  [Integration.deepAgents]: "LangChain Deep Agents",
+  [Integration.custom]: "Custom / Unsupported Framework",
 };
 
 export const DEFAULT_BASE_URL = "https://api.axonpush.xyz";

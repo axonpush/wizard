@@ -8,7 +8,7 @@ yargs(hideBin(process.argv))
   .option("integration", {
     alias: "i",
     type: "string",
-    describe: "Framework integration (langchain, openai-agents, anthropic, crewai, core)",
+    describe: "Framework integration(s) (langchain, openai-agents, anthropic, crewai, deepagents, custom). Can be specified multiple times.",
   })
   .option("api-key", {
     type: "string",
@@ -36,8 +36,11 @@ yargs(hideBin(process.argv))
     "Integrate AxonPush into your AI agent project",
     () => {},
     async (argv) => {
+      const integrations = argv.integration
+        ? argv.integration.split(",").map((s: string) => s.trim())
+        : undefined;
       await run({
-        integration: argv.integration as string | undefined,
+        integrations,
         apiKey: argv["api-key"] as string | undefined,
         tenantId: argv["tenant-id"] as string | undefined,
         baseUrl: argv["base-url"] as string | undefined,

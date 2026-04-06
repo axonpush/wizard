@@ -1,11 +1,11 @@
 ---
-name: core
-description: Integrate AxonPush event publishing directly without framework-specific callbacks
+name: custom
+description: Integrate AxonPush event publishing directly for custom or unsupported frameworks
 ---
 
-# AxonPush Core SDK Integration
+# AxonPush Custom Framework Integration
 
-Integrate AxonPush event publishing directly (no framework-specific callbacks).
+Integrate AxonPush event publishing directly for custom or unsupported frameworks.
 
 ## What gets added
 

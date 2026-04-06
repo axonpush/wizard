@@ -17,7 +17,7 @@ export function detectFrameworks(dir: string): Integration[] {
   const detected: Integration[] = [];
 
   for (const [integration, config] of Object.entries(FRAMEWORK_REGISTRY)) {
-    if (integration === Integration.core) continue;
+    if (integration === Integration.custom) continue;
     const match = config.detection.packages.some((pkg) => deps.has(pkg));
     if (match) detected.push(integration as Integration);
   }
@@ -71,7 +71,7 @@ function scanImports(dir: string): Integration[] {
   for (const file of pyFiles) {
     const content = fs.readFileSync(file, "utf-8");
     for (const [integration, config] of Object.entries(FRAMEWORK_REGISTRY)) {
-      if (integration === Integration.core) continue;
+      if (integration === Integration.custom) continue;
       if (config.detection.imports.some((pattern) => content.includes(pattern))) {
         if (!detected.includes(integration as Integration)) {
           detected.push(integration as Integration);

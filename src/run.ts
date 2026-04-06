@@ -47,40 +47,83 @@ switch (cmd) {
 }
 
 interface WizardArgs {
-  integration?: string;
+  integrations?: string[];
   apiKey?: string;
   tenantId?: string;
   baseUrl?: string;
   installDir?: string;
 }
 
+const SUPPORTED_FRAMEWORKS: Integration[] = [
+  Integration.langchain,
+  Integration.openaiAgents,
+  Integration.anthropic,
+  Integration.crewai,
+  Integration.deepAgents,
+];
+
 export async function run(args: WizardArgs): Promise<void> {
   const projectDir = args.installDir || process.cwd();
-  const projectName = path.basename(projectDir);
 
   console.log();
   console.log(chalk.bold("  AxonPush Wizard"));
   console.log(chalk.dim("  AI-powered SDK integration\n"));
 
+  const pkgMgr = detectPackageManager(projectDir);
+  console.log(chalk.dim(`  Project: ${projectDir}`));
+  console.log(chalk.dim(`  Package manager: ${pkgMgr}\n`));
+
   // 1. Detect frameworks
-  let integrations: Integration[];
-  if (args.integration && args.integration in Integration) {
-    integrations = [args.integration as Integration];
-    console.log(chalk.green(`  Framework: ${INTEGRATION_LABELS[integrations[0]]} (from flag)`));
-  } else {
+  let integrations: Integration[] = [];
+  if (args.integrations && args.integrations.length > 0) {
+    for (const integ of args.integrations) {
+      if (integ in Integration) {
+        integrations.push(integ as Integration);
+      } else {
+        console.log(chalk.yellow(`  Unknown integration: ${integ}`));
+      }
+    }
+    if (integrations.length > 0) {
+      console.log(chalk.green(`  Frameworks (from flag): ${integrations.map((i) => INTEGRATION_LABELS[i]).join(", ")}\n`));
+    }
+  }
+
+  // 2. If no integrations specified via flag, prompt for selection
+  if (integrations.length === 0) {
     const detected = detectFrameworks(projectDir);
-    const pkgMgr = detectPackageManager(projectDir);
-    console.log(chalk.dim(`  Project: ${projectDir}`));
-    console.log(chalk.dim(`  Package manager: ${pkgMgr}`));
+    const detectedSet = new Set(detected);
+
+    const choices = SUPPORTED_FRAMEWORKS.map((integ) => ({
+      title: INTEGRATION_LABELS[integ] + (detectedSet.has(integ) ? " (detected)" : ""),
+      value: integ,
+      selected: detectedSet.has(integ),
+    }));
+
+    choices.push({
+      title: "Custom / Unsupported Framework",
+      value: Integration.custom,
+      selected: false,
+    });
+
+    const { frameworks } = await prompts({
+      type: "multiselect",
+      name: "frameworks",
+      message: "Select framework(s) to integrate:",
+      choices,
+      hint: "Space to select, Enter to confirm",
+    });
+
+    if (!frameworks || frameworks.length === 0) {
+      console.log(chalk.red("  At least one framework must be selected"));
+      process.exit(1);
+    }
+
+    integrations = frameworks as Integration[];
 
     if (detected.length > 0) {
-      integrations = detected;
-      console.log(chalk.green(`  Detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}\n`));
-    } else {
-      integrations = [Integration.core];
-      console.log(chalk.yellow("  No supported framework detected"));
-      console.log(chalk.dim(`  Using bare SDK integration\n`));
+      console.log(chalk.green(`  Detected: ${detected.map((d) => INTEGRATION_LABELS[d]).join(", ")}`));
     }
+    console.log(chalk.green(`  Selected: ${integrations.map((i) => INTEGRATION_LABELS[i]).join(", ")}\n`));
   }
 
   const configs = integrations.map((i) => FRAMEWORK_REGISTRY[i]);

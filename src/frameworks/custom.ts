@@ -1,9 +1,9 @@
 import { Integration } from "../lib/constants.js";
 import type { FrameworkConfig } from "../lib/framework-config.js";
 
-export const CORE_CONFIG: FrameworkConfig = {
-  name: "Core SDK (no framework)",
-  integration: Integration.core,
+export const CUSTOM_CONFIG: FrameworkConfig = {
+  name: "Custom / Unsupported Framework",
+  integration: Integration.custom,
   packageExtra: "",
   detection: {
     packages: [],
@@ -13,5 +13,5 @@ export const CORE_CONFIG: FrameworkConfig = {
     integrationHint:
       "Create an AxonPush client and use client.events.publish() to send events from your code",
   },
-  skillDir: "skills/core",
+  skillDir: "skills/custom",
 };
