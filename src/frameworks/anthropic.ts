@@ -3,8 +3,9 @@ import type { FrameworkConfig } from "../lib/framework-config.js";
 
 export const ANTHROPIC_CONFIG: FrameworkConfig = {
   name: "Anthropic / Claude",
+  language: "python",
   integration: Integration.anthropic,
-  packageExtra: "anthropic",
+  installPackage: "anthropic",
   detection: {
     packages: ["anthropic"],
     imports: ["import anthropic", "from anthropic"],

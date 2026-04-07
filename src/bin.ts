@@ -8,7 +8,16 @@ yargs(hideBin(process.argv))
   .option("integration", {
     alias: "i",
     type: "string",
-    describe: "Framework integration(s) (langchain, openai-agents, anthropic, crewai, deepagents, custom). Can be specified multiple times.",
+    describe:
+      "Framework integration(s). Can be specified multiple times.\n" +
+      "Python: langchain, openai-agents, anthropic, crewai, deepagents, custom\n" +
+      "TypeScript: langchain, langgraph, openai-agents, anthropic, vercel-ai, mastra, google-adk, llamaindex, ts-custom",
+  })
+  .option("language", {
+    alias: "l",
+    type: "string",
+    describe: "Project language (python or typescript). Auto-detected if omitted.",
+    choices: ["python", "typescript"],
   })
   .option("api-key", {
     type: "string",
@@ -41,6 +50,7 @@ yargs(hideBin(process.argv))
         : undefined;
       await run({
         integrations,
+        language: argv.language as "python" | "typescript" | undefined,
         apiKey: argv["api-key"] as string | undefined,
         tenantId: argv["tenant-id"] as string | undefined,
         baseUrl: argv["base-url"] as string | undefined,

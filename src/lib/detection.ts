@@ -1,40 +1,90 @@
 import fs from "fs";
 import path from "path";
 import { load as loadToml } from "js-toml";
-import { Integration } from "./constants.js";
-import { FRAMEWORK_REGISTRY } from "./registry.js";
+import { Integration, type Language } from "./constants.js";
+import { getConfigsForLanguage } from "./registry.js";
 
-export type PackageManager = "uv" | "poetry" | "pip";
+export type PythonPackageManager = "uv" | "poetry" | "pip";
+export type TsPackageManager = "bun" | "pnpm" | "yarn" | "npm";
+export type PackageManager = PythonPackageManager | TsPackageManager;
 
-export function detectPackageManager(dir: string): PackageManager {
+export function detectPyPackageManager(dir: string): PythonPackageManager {
   if (fs.existsSync(path.join(dir, "uv.lock"))) return "uv";
   if (fs.existsSync(path.join(dir, "poetry.lock"))) return "poetry";
   return "pip";
 }
 
-export function detectFrameworks(dir: string): Integration[] {
-  const deps = readDependencies(dir);
-  const detected: Integration[] = [];
+export function detectTsPackageManager(dir: string): TsPackageManager {
+  if (fs.existsSync(path.join(dir, "bun.lock")) || fs.existsSync(path.join(dir, "bun.lockb"))) return "bun";
+  if (fs.existsSync(path.join(dir, "pnpm-lock.yaml"))) return "pnpm";
+  if (fs.existsSync(path.join(dir, "yarn.lock"))) return "yarn";
+  return "npm";
+}
 
-  for (const [integration, config] of Object.entries(FRAMEWORK_REGISTRY)) {
-    if (integration === Integration.custom) continue;
-    const match = config.detection.packages.some((pkg) => deps.has(pkg));
-    if (match) detected.push(integration as Integration);
+export function detectPackageManager(dir: string, language: Language): PackageManager {
+  if (language === "typescript") return detectTsPackageManager(dir);
+  return detectPyPackageManager(dir);
+}
+
+export function detectLanguage(dir: string): "python" | "typescript" | "both" {
+  const hasPython =
+    fs.existsSync(path.join(dir, "pyproject.toml")) ||
+    fs.existsSync(path.join(dir, "requirements.txt"));
+  const hasTs = fs.existsSync(path.join(dir, "package.json"));
+
+  if (hasPython && hasTs) return "both";
+  if (hasTs) return "typescript";
+  return "python";
+}
+
+export function detectFrameworks(dir: string, language: Language): Integration[] {
+  if (language === "typescript") return detectTsFrameworks(dir);
+  return detectPyFrameworks(dir);
+}
+
+function detectPyFrameworks(dir: string): Integration[] {
+  const deps = readPyDependencies(dir);
+  const detected: Integration[] = [];
+  const configs = getConfigsForLanguage("python");
+
+  for (const config of configs) {
+    if (config.integration === Integration.custom) continue;
+    if (config.detection.packages.some((pkg) => deps.has(pkg))) {
+      detected.push(config.integration);
+    }
   }
 
-  // If nothing matched from deps, try scanning imports
   if (detected.length === 0) {
-    const importMatches = scanImports(dir);
+    const importMatches = scanPyImports(dir);
     detected.push(...importMatches);
   }
 
   return detected;
 }
 
-function readDependencies(dir: string): Set<string> {
+function detectTsFrameworks(dir: string): Integration[] {
+  const deps = readTsDependencies(dir);
+  const detected: Integration[] = [];
+  const configs = getConfigsForLanguage("typescript");
+
+  for (const config of configs) {
+    if (config.integration === Integration.tsCustom) continue;
+    if (config.detection.packages.some((pkg) => deps.has(pkg))) {
+      detected.push(config.integration);
+    }
+  }
+
+  if (detected.length === 0) {
+    const importMatches = scanTsImports(dir);
+    detected.push(...importMatches);
+  }
+
+  return detected;
+}
+
+function readPyDependencies(dir: string): Set<string> {
   const deps = new Set<string>();
 
-  // pyproject.toml
   const pyproject = path.join(dir, "pyproject.toml");
   if (fs.existsSync(pyproject)) {
     try {
@@ -46,10 +96,9 @@ function readDependencies(dir: string): Set<string> {
         const name = dep.split(/[><=!~\[;]/)[0].trim().toLowerCase();
         if (name) deps.add(name);
       }
-    } catch { /* malformed toml, skip */ }
+    } catch {}
   }
 
-  // requirements.txt
   const reqTxt = path.join(dir, "requirements.txt");
   if (fs.existsSync(reqTxt)) {
     const lines = fs.readFileSync(reqTxt, "utf-8").split("\n");
@@ -64,17 +113,60 @@ function readDependencies(dir: string): Set<string> {
   return deps;
 }
 
-function scanImports(dir: string): Integration[] {
+function readTsDependencies(dir: string): Set<string> {
+  const deps = new Set<string>();
+
+  const pkgPath = path.join(dir, "package.json");
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const content = fs.readFileSync(pkgPath, "utf-8");
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      for (const field of ["dependencies", "devDependencies"]) {
+        const depObj = parsed[field] as Record<string, string> | undefined;
+        if (depObj) {
+          for (const name of Object.keys(depObj)) {
+            deps.add(name);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return deps;
+}
+
+function scanPyImports(dir: string): Integration[] {
   const detected: Integration[] = [];
-  const pyFiles = findPyFiles(dir, 3); // max depth 3
+  const pyFiles = findPyFiles(dir, 3);
+  const configs = getConfigsForLanguage("python");
 
   for (const file of pyFiles) {
     const content = fs.readFileSync(file, "utf-8");
-    for (const [integration, config] of Object.entries(FRAMEWORK_REGISTRY)) {
-      if (integration === Integration.custom) continue;
+    for (const config of configs) {
+      if (config.integration === Integration.custom) continue;
       if (config.detection.imports.some((pattern) => content.includes(pattern))) {
-        if (!detected.includes(integration as Integration)) {
-          detected.push(integration as Integration);
+        if (!detected.includes(config.integration)) {
+          detected.push(config.integration);
+        }
+      }
+    }
+  }
+
+  return detected;
+}
+
+function scanTsImports(dir: string): Integration[] {
+  const detected: Integration[] = [];
+  const tsFiles = findTsFiles(dir, 3);
+  const configs = getConfigsForLanguage("typescript");
+
+  for (const file of tsFiles) {
+    const content = fs.readFileSync(file, "utf-8");
+    for (const config of configs) {
+      if (config.integration === Integration.tsCustom) continue;
+      if (config.detection.imports.some((pattern) => content.includes(pattern))) {
+        if (!detected.includes(config.integration)) {
+          detected.push(config.integration);
         }
       }
     }
@@ -97,7 +189,27 @@ function findPyFiles(dir: string, maxDepth: number, depth = 0): string[] {
         files.push(full);
       }
     }
-  } catch { /* permission error, skip */ }
+  } catch {}
+
+  return files;
+}
+
+function findTsFiles(dir: string, maxDepth: number, depth = 0): string[] {
+  if (depth > maxDepth) return [];
+  const files: string[] = [];
+  const skipDirs = new Set(["node_modules", "dist", ".next", ".nuxt", "build", "coverage"]);
+
+  try {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || skipDirs.has(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...findTsFiles(full, maxDepth, depth + 1));
+      } else if (/\.(ts|tsx|mts)$/.test(entry.name) && !entry.name.endsWith(".d.ts")) {
+        files.push(full);
+      }
+    }
+  } catch {}
 
   return files;
 }

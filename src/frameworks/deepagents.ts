@@ -3,8 +3,9 @@ import type { FrameworkConfig } from "../lib/framework-config.js";
 
 export const DEEPAGENTS_CONFIG: FrameworkConfig = {
   name: "LangChain Deep Agents",
+  language: "python",
   integration: Integration.deepAgents,
-  packageExtra: "deepagents",
+  installPackage: "deepagents",
   detection: {
     packages: ["deepagents"],
     imports: ["from deepagents", "import deepagents", "create_deep_agent"],

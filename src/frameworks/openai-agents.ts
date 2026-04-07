@@ -3,8 +3,9 @@ import type { FrameworkConfig } from "../lib/framework-config.js";
 
 export const OPENAI_AGENTS_CONFIG: FrameworkConfig = {
   name: "OpenAI Agents SDK",
+  language: "python",
   integration: Integration.openaiAgents,
-  packageExtra: "openai-agents",
+  installPackage: "openai-agents",
   detection: {
     packages: ["openai-agents", "agents"],
     imports: ["from agents import", "from agents.", "import agents"],

@@ -3,8 +3,9 @@ import type { FrameworkConfig } from "../lib/framework-config.js";
 
 export const CUSTOM_CONFIG: FrameworkConfig = {
   name: "Custom / Unsupported Framework",
+  language: "python",
   integration: Integration.custom,
-  packageExtra: "",
+  installPackage: "",
   detection: {
     packages: [],
     imports: [],

@@ -9,7 +9,16 @@ const result = await Bun.build({
   outdir: "dist",
   target: "node",
   format: "esm",
-  external: ["@anthropic-ai/claude-agent-sdk"],
+  external: [
+    "@anthropic-ai/claude-agent-sdk",
+    "ink",
+    "react",
+    "react/jsx-runtime",
+    "ink-select-input",
+    "ink-text-input",
+    "ink-spinner",
+    "yoga-wasm-web",
+  ],
   banner: "#!/usr/bin/env node",
 });
 

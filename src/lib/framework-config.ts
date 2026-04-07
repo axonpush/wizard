@@ -1,12 +1,13 @@
-import { Integration } from "./constants.js";
+import type { Integration, Language } from "./constants.js";
 
 export interface FrameworkConfig {
   name: string;
+  language: Language;
   integration: Integration;
-  packageExtra: string; // "langchain" → pip install axonpush[langchain]
+  installPackage: string;
   detection: {
-    packages: string[]; // dep names in pyproject.toml / requirements.txt
-    imports: string[]; // import patterns to grep for
+    packages: string[];
+    imports: string[];
   };
   prompts: {
     integrationHint: string;

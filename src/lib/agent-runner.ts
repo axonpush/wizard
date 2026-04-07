@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { Language } from "./constants.js";
 import type { FrameworkConfig } from "./framework-config.js";
 import type { PackageManager } from "./detection.js";
 import { runAgent } from "./agent-interface.js";
@@ -11,6 +12,7 @@ export interface RunnerOptions {
   configs: FrameworkConfig[];
   projectDir: string;
   packageManager: PackageManager;
+  language: Language;
   apiKey: string;
   tenantId: string;
   baseUrl: string;
@@ -27,20 +29,35 @@ function readSkill(skillDir: string): string {
   return "";
 }
 
-function buildInstallCmd(pm: PackageManager, extras: string[]): string {
+function buildPyInstallCmd(pm: PackageManager, extras: string[]): string {
   const filtered = extras.filter(Boolean);
   const pkg = filtered.length > 0 ? `"axonpush[${filtered.join(",")}]"` : `"axonpush"`;
-  const cmds: Record<PackageManager, string> = {
+  const cmds: Record<string, string> = {
     uv: `uv add ${pkg}`,
     poetry: `poetry add ${pkg}`,
     pip: `pip install ${pkg}`,
   };
-  return cmds[pm];
+  return cmds[pm] ?? `pip install ${pkg}`;
+}
+
+function buildTsInstallCmd(pm: PackageManager): string {
+  const cmds: Record<string, string> = {
+    bun: "bun add @axonpush/sdk",
+    pnpm: "pnpm add @axonpush/sdk",
+    yarn: "yarn add @axonpush/sdk",
+    npm: "npm install @axonpush/sdk",
+  };
+  return cmds[pm] ?? "npm install @axonpush/sdk";
+}
+
+function buildInstallCmd(language: Language, pm: PackageManager, extras: string[]): string {
+  if (language === "typescript") return buildTsInstallCmd(pm);
+  return buildPyInstallCmd(pm, extras);
 }
 
 function buildPrompt(opts: RunnerOptions): string {
-  const extras = opts.configs.map((c) => c.packageExtra);
-  const pkgCmd = buildInstallCmd(opts.packageManager, extras);
+  const extras = opts.configs.map((c) => c.installPackage);
+  const pkgCmd = buildInstallCmd(opts.language, opts.packageManager, extras);
   const frameworkNames = opts.configs.map((c) => c.name).join(", ");
 
   const frameworkSections = opts.configs
@@ -52,11 +69,27 @@ ${skill ? `\n#### Skill Reference: ${c.name}\n\n${skill}` : ""}`;
     })
     .join("\n\n");
 
-  return `You are integrating the AxonPush Python SDK into this project.
+  const sdkName =
+    opts.language === "typescript"
+      ? "AxonPush TypeScript SDK (@axonpush/sdk)"
+      : "AxonPush Python SDK (axonpush)";
+
+  const envAccess =
+    opts.language === "typescript"
+      ? "process.env"
+      : "os.environ";
+
+  const channelIdExpr =
+    opts.language === "typescript"
+      ? "Number(process.env.AXONPUSH_CHANNEL_ID)"
+      : "int(os.environ['AXONPUSH_CHANNEL_ID'])";
+
+  return `You are integrating the ${sdkName} into this project.
 
 ## Project Info
 - Directory: ${opts.projectDir}
 - Package manager: ${opts.packageManager}
+- Language: ${opts.language}
 - Frameworks detected: ${frameworkNames}
 
 ## AxonPush API Helper
@@ -97,8 +130,8 @@ All commands return JSON.
    If .env already exists, append the AXONPUSH_ variables (don't overwrite existing vars).
 
 6. **Integrate the SDK** into each relevant entry point, using the appropriate channel ID env var.
-   Never hardcode channel IDs — always read from os.environ.
-   Make sure os is imported if using os.environ.
+   Never hardcode channel IDs — always read from ${envAccess}.
+   Use ${channelIdExpr} to parse the channel ID.${opts.language === "typescript" ? "\n   Make sure process.env values are available (e.g. via dotenv or framework built-in env loading)." : "\n   Make sure os is imported if using os.environ."}
 
 ## Frameworks
 
@@ -112,5 +145,5 @@ export async function agentRunner(
   onStatus: (msg: string) => void,
 ): Promise<void> {
   const prompt = buildPrompt(opts);
-  await runAgent(prompt, opts.projectDir, onStatus);
+  await runAgent(prompt, opts.projectDir, onStatus, opts.language);
 }

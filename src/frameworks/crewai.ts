@@ -3,8 +3,9 @@ import type { FrameworkConfig } from "../lib/framework-config.js";
 
 export const CREWAI_CONFIG: FrameworkConfig = {
   name: "CrewAI",
+  language: "python",
   integration: Integration.crewai,
-  packageExtra: "crewai",
+  installPackage: "crewai",
   detection: {
     packages: ["crewai"],
     imports: ["from crewai", "import crewai"],
