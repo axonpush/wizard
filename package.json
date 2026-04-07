@@ -17,6 +17,26 @@
     "start": "bun dist/bin.js",
     "typecheck": "tsc --noEmit"
   },
+  "keywords": [
+    "axonpush",
+    "observability",
+    "tracing",
+    "ai",
+    "agents",
+    "sdk",
+    "wizard",
+    "cli",
+    "langchain",
+    "openai",
+    "anthropic",
+    "vercel-ai",
+    "mastra",
+    "crewai",
+    "llamaindex",
+    "langgraph",
+    "typescript",
+    "python"
+  ],
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.87",
     "ink": "^6.8.0",
