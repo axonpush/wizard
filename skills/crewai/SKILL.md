@@ -52,3 +52,7 @@ axonpush_callbacks = AxonPushCrewCallbacks(
 5. Add `step_callback=axonpush_callbacks.on_step` and `task_callback=axonpush_callbacks.on_task_complete` to `Crew()`
 6. Add `axonpush_callbacks.on_crew_start()` before `crew.kickoff()`
 7. Add `axonpush_callbacks.on_crew_end(result)` after
+
+## Fail-Open
+
+The SDK is fail-open by default (`fail_open=True`). If AxonPush is unreachable, tracing callbacks are silently suppressed — the CrewAI integration will never crash or block the user's application.

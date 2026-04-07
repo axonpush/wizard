@@ -50,3 +50,7 @@ tracer = AxonPushAnthropicTracer(
 4. Add imports and create the tracer
 5. Replace `anthropic_client.messages.create(...)` with `tracer.create_message(anthropic_client, ...)`
 6. For tool results, add `tracer.send_tool_result(tool_use_id, result)` calls
+
+## Fail-Open
+
+The SDK is fail-open by default (`fail_open=True`). If AxonPush is unreachable, tracing calls are silently suppressed — the Anthropic integration will never crash or block the user's application.

@@ -47,3 +47,7 @@ axonpush_hooks = AxonPushRunHooks(
 - OpenAI Agents SDK is **async-only**, so use `AsyncAxonPush` (not `AxonPush`)
 - Make sure to close the client when done: `await axonpush_client.close()`
 - Or use `async with AsyncAxonPush(...) as client:` context manager
+
+## Fail-Open
+
+The SDK is fail-open by default (`fail_open=True`). If AxonPush is unreachable, tracing hooks are silently suppressed — the OpenAI Agents integration will never crash or block the user's application.

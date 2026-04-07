@@ -41,3 +41,7 @@ axonpush_client = AxonPush(
 3. Find the main entry point of the project
 4. Add imports and create the client as a module-level singleton
 5. Add example publish calls at key points (e.g., start, end, error handling)
+
+## Fail-Open
+
+The SDK is fail-open by default (`fail_open=True`). If AxonPush is unreachable, publish calls return `None` instead of raising — the SDK will never crash or block the user's application.

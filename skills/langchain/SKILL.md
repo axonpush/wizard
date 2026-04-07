@@ -45,3 +45,7 @@ axonpush_handler = AxonPushCallbackHandler(
 3. Find the main file where chains/agents are invoked
 4. Add the imports and client initialization (as module-level code)
 5. Add `config={"callbacks": [axonpush_handler]}` to `.invoke()` calls
+
+## Fail-Open
+
+The SDK is fail-open by default (`fail_open=True`). If AxonPush is unreachable, tracing callbacks are silently suppressed — the LangChain integration will never crash or block the user's application.
