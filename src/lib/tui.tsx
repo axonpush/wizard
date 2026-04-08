@@ -93,6 +93,7 @@ export function selectOne<T extends string>(
               items={items}
               onSelect={(item) => {
                 resolve(item.value);
+                inst.clear();
                 inst.unmount();
               }}
             />
@@ -133,6 +134,7 @@ export function selectMany<T extends string>(
               .filter((_, i) => selected.has(i))
               .map((c) => c.value);
             resolve(result);
+            inst.clear();
             inst.unmount();
           } else {
             setSelected((prev) => {
@@ -202,6 +204,7 @@ export function textInput(
               mask={opts?.mask}
               onSubmit={(val) => {
                 resolve(val);
+                inst.clear();
                 inst.unmount();
               }}
             />
@@ -285,11 +288,13 @@ export function showStatus(message: string): {
     done(msg: string) {
       setMsg(msg);
       setMode("done");
+      inst.clear();
       inst.unmount();
     },
     fail(msg: string) {
       setMsg(msg);
       setMode("fail");
+      inst.clear();
       inst.unmount();
     },
   };
