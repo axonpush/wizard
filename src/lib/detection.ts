@@ -42,6 +42,120 @@ export function detectFrameworks(dir: string, language: Language): Integration[]
   return detectPyFrameworks(dir);
 }
 
+/**
+ * Logging libraries we know how to forward to AxonPush via the official
+ * SDK integrations (axonpush-ts and axonpush-python).
+ *
+ * Detected libraries are reported back to the wizard's setup agent so it
+ * can suggest the appropriate logger integration during the setup flow.
+ *
+ * Stdlib options (`console`, `print`/`logging`) are always available — they're
+ * the fallback when no third-party logger is detected.
+ */
+export type LogLibrary =
+  // TypeScript / Node
+  | "console"
+  | "pino"
+  | "winston"
+  | "bunyan"
+  // Python
+  | "print"
+  | "logging"
+  | "loguru"
+  | "structlog";
+
+export function detectLogLibraries(dir: string, language: Language): LogLibrary[] {
+  if (language === "typescript") {
+    const deps = readTsDependencies(dir);
+    const found: LogLibrary[] = [];
+    if (deps.has("pino")) found.push("pino");
+    if (deps.has("winston")) found.push("winston");
+    if (deps.has("bunyan")) found.push("bunyan");
+    // `console` is always available; we report it last as the fallback.
+    found.push("console");
+    return found;
+  }
+
+  const deps = readPyDependencies(dir);
+  const found: LogLibrary[] = [];
+  if (deps.has("loguru")) found.push("loguru");
+  if (deps.has("structlog")) found.push("structlog");
+  // stdlib `logging` is always available
+  found.push("logging");
+  // `print()` capture is the fallback for agent projects with free-form output
+  found.push("print");
+  return found;
+}
+
+/**
+ * Returns the import + setup snippet the wizard should suggest for a given
+ * detected logging library, in the format the setup agent can paste into the
+ * user's project.
+ */
+export function getLogIntegrationSnippet(library: LogLibrary): {
+  importStmt: string;
+  setup: string;
+  notes: string;
+} {
+  switch (library) {
+    case "pino":
+      return {
+        importStmt: `import { createAxonPushPinoStream } from '@axonpush/sdk/integrations/pino';`,
+        setup: `const stream = createAxonPushPinoStream({ client, channelId, serviceName: 'my-service' });
+const log = pino({ level: 'info' }, stream);`,
+        notes: "Pino transport — pass the returned stream as the second arg to pino().",
+      };
+    case "winston":
+      return {
+        importStmt: `import { createAxonPushWinstonTransport } from '@axonpush/sdk/integrations/winston';`,
+        setup: `const transport = await createAxonPushWinstonTransport({ client, channelId, serviceName: 'my-service' });
+const log = winston.createLogger({ transports: [transport] });`,
+        notes: "Winston transport — async constructor, await the result.",
+      };
+    case "bunyan":
+      return {
+        importStmt: `// Bunyan is not directly supported. Use the console capture as a fallback.`,
+        setup: `import { setupConsoleCapture } from '@axonpush/sdk/integrations/console';
+setupConsoleCapture({ client, channelId, source: 'app', serviceName: 'my-service' });`,
+        notes: "Bunyan support is not yet built; recommend setupConsoleCapture as a fallback.",
+      };
+    case "console":
+      return {
+        importStmt: `import { setupConsoleCapture } from '@axonpush/sdk/integrations/console';`,
+        setup: `setupConsoleCapture({ client, channelId, source: 'agent' });`,
+        notes: "Patches global console.* methods. Use source: 'app' for backend services.",
+      };
+    case "loguru":
+      return {
+        importStmt: `from axonpush.integrations.loguru import create_axonpush_loguru_sink`,
+        setup: `from loguru import logger
+sink = create_axonpush_loguru_sink(client=client, channel_id=channel_id, service_name="my-service")
+logger.add(sink, serialize=True)  # serialize=True is required`,
+        notes: "Loguru sink. Requires axonpush[loguru] extra. serialize=True is mandatory.",
+      };
+    case "structlog":
+      return {
+        importStmt: `from axonpush.integrations.structlog import axonpush_structlog_processor`,
+        setup: `forwarder = axonpush_structlog_processor(client=client, channel_id=channel_id, service_name="my-service")
+structlog.configure(processors=[..., forwarder, structlog.processors.JSONRenderer()])`,
+        notes: "Structlog processor. Requires axonpush[structlog] extra. Place BEFORE the renderer.",
+      };
+    case "logging":
+      return {
+        importStmt: `from axonpush.integrations.logging_handler import AxonPushLoggingHandler`,
+        setup: `handler = AxonPushLoggingHandler(client=client, channel_id=channel_id, service_name="my-service")
+logging.getLogger().addHandler(handler)`,
+        notes: "Stdlib logging handler. No extra dependency needed.",
+      };
+    case "print":
+      return {
+        importStmt: `from axonpush.integrations.print_capture import setup_print_capture`,
+        setup: `setup_print_capture(client, channel_id=channel_id, source="agent")`,
+        notes: "Tees sys.stdout/sys.stderr. Use source='app' for backend services.",
+      };
+  }
+}
+
 function detectPyFrameworks(dir: string): Integration[] {
   const deps = readPyDependencies(dir);
   const detected: Integration[] = [];
@@ -82,7 +196,7 @@ function detectTsFrameworks(dir: string): Integration[] {
   return detected;
 }
 
-function readPyDependencies(dir: string): Set<string> {
+export function readPyDependencies(dir: string): Set<string> {
   const deps = new Set<string>();
 
   const pyproject = path.join(dir, "pyproject.toml");
@@ -113,7 +227,7 @@ function readPyDependencies(dir: string): Set<string> {
   return deps;
 }
 
-function readTsDependencies(dir: string): Set<string> {
+export function readTsDependencies(dir: string): Set<string> {
   const deps = new Set<string>();
 
   const pkgPath = path.join(dir, "package.json");

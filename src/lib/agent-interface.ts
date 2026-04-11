@@ -1,5 +1,6 @@
 import type { Language } from "./constants.js";
 import { getCommandments } from "./commandments.js";
+import type { CommandmentGroup } from "./framework-config.js";
 
 interface AgentMessage {
   type: string;
@@ -23,7 +24,7 @@ function formatToolStatus(name: string, input?: Record<string, unknown>): string
           switch (action) {
             case "list-apps":      return "Fetching AxonPush apps...";
             case "create-app":     return `Creating AxonPush app "${args ?? ""}"`;
-            case "list-channels":  return "Fetching AxonPush channels...";
+            case "list-app":       return `Fetching AxonPush app ${args ?? ""}`;
             case "create-channel": return `Creating AxonPush channel "${args?.split(/\s+/)[0] ?? ""}"`;
           }
         }
@@ -42,6 +43,7 @@ export async function runAgent(
   cwd: string,
   onStatus: (msg: string) => void,
   language: Language = "python",
+  commandmentGroups: CommandmentGroup[] = ["core"],
 ): Promise<void> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
@@ -64,7 +66,7 @@ export async function runAgent(
         "Grep",
         "Bash",
       ],
-      systemPrompt: `${expertise} Follow these rules:\n\n${getCommandments(language)}`,
+      systemPrompt: `${expertise} Follow these rules:\n\n${getCommandments(language, commandmentGroups)}`,
     },
   });
 

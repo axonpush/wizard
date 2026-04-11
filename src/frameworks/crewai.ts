@@ -15,4 +15,5 @@ export const CREWAI_CONFIG: FrameworkConfig = {
       "Add step_callback=callbacks.on_step and task_callback=callbacks.on_task_complete to Crew(), call on_crew_start() before and on_crew_end() after kickoff()",
   },
   skillDir: "skills/crewai",
+  commandmentGroup: Integration.crewai,
 };

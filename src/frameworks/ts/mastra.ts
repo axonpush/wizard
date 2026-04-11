@@ -15,4 +15,5 @@ export const TS_MASTRA_CONFIG: FrameworkConfig = {
       "Create AxonPushMastraHooks and register beforeToolUse/afterToolUse/onWorkflowStart/onWorkflowEnd hooks on the Mastra agent",
   },
   skillDir: "skills/ts-mastra",
+  commandmentGroup: Integration.mastra,
 };

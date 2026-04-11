@@ -1,5 +1,7 @@
 import type { Integration, Language } from "./constants.js";
 
+export type CommandmentGroup = "core" | Integration;
+
 export interface FrameworkConfig {
   name: string;
   language: Language;
@@ -13,4 +15,7 @@ export interface FrameworkConfig {
     integrationHint: string;
   };
   skillDir: string;
+  internal?: boolean;
+  extraTsPackages?: string[];
+  commandmentGroup?: CommandmentGroup;
 }

@@ -6,6 +6,7 @@ import { ANTHROPIC_CONFIG } from "../frameworks/anthropic.js";
 import { CREWAI_CONFIG } from "../frameworks/crewai.js";
 import { DEEPAGENTS_CONFIG } from "../frameworks/deepagents.js";
 import { CUSTOM_CONFIG } from "../frameworks/custom.js";
+import { OTEL_PYTHON_CONFIG } from "../frameworks/otel.js";
 import { TS_LANGCHAIN_CONFIG } from "../frameworks/ts/langchain.js";
 import { TS_LANGGRAPH_CONFIG } from "../frameworks/ts/langgraph.js";
 import { TS_OPENAI_AGENTS_CONFIG } from "../frameworks/ts/openai-agents.js";
@@ -15,6 +16,7 @@ import { TS_MASTRA_CONFIG } from "../frameworks/ts/mastra.js";
 import { TS_GOOGLE_ADK_CONFIG } from "../frameworks/ts/google-adk.js";
 import { TS_LLAMAINDEX_CONFIG } from "../frameworks/ts/llamaindex.js";
 import { TS_CUSTOM_CONFIG } from "../frameworks/ts/custom.js";
+import { OTEL_TS_CONFIG } from "../frameworks/ts/otel.js";
 
 function key(language: Language, integration: Integration): string {
   return `${language}:${integration}`;
@@ -27,6 +29,7 @@ export const FRAMEWORK_REGISTRY: Record<string, FrameworkConfig> = {
   [key("python", Integration.crewai)]: CREWAI_CONFIG,
   [key("python", Integration.deepAgents)]: DEEPAGENTS_CONFIG,
   [key("python", Integration.custom)]: CUSTOM_CONFIG,
+  [key("python", Integration.otel)]: OTEL_PYTHON_CONFIG,
   [key("typescript", Integration.langchain)]: TS_LANGCHAIN_CONFIG,
   [key("typescript", Integration.langgraph)]: TS_LANGGRAPH_CONFIG,
   [key("typescript", Integration.openaiAgents)]: TS_OPENAI_AGENTS_CONFIG,
@@ -36,12 +39,23 @@ export const FRAMEWORK_REGISTRY: Record<string, FrameworkConfig> = {
   [key("typescript", Integration.googleAdk)]: TS_GOOGLE_ADK_CONFIG,
   [key("typescript", Integration.llamaindex)]: TS_LLAMAINDEX_CONFIG,
   [key("typescript", Integration.tsCustom)]: TS_CUSTOM_CONFIG,
+  [key("typescript", Integration.otel)]: OTEL_TS_CONFIG,
 };
 
 export function getConfig(language: Language, integration: Integration): FrameworkConfig | undefined {
   return FRAMEWORK_REGISTRY[key(language, integration)];
 }
 
-export function getConfigsForLanguage(language: Language): FrameworkConfig[] {
-  return Object.values(FRAMEWORK_REGISTRY).filter((c) => c.language === language);
+export interface ConfigQueryOptions {
+  includeInternal?: boolean;
+}
+
+export function getConfigsForLanguage(
+  language: Language,
+  opts: ConfigQueryOptions = {},
+): FrameworkConfig[] {
+  const includeInternal = opts.includeInternal ?? false;
+  return Object.values(FRAMEWORK_REGISTRY).filter(
+    (c) => c.language === language && (includeInternal || !c.internal),
+  );
 }

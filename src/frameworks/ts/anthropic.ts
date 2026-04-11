@@ -15,4 +15,5 @@ export const TS_ANTHROPIC_CONFIG: FrameworkConfig = {
       "Create AxonPushAnthropicTracer and use tracer.createMessage(anthropicClient, params) instead of anthropicClient.messages.create(params)",
   },
   skillDir: "skills/ts-anthropic",
+  commandmentGroup: Integration.anthropic,
 };

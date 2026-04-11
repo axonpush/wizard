@@ -1,10 +1,28 @@
 import path from "path";
 import fs from "fs";
-import { Integration, INTEGRATION_LABELS, DEFAULT_BASE_URL, type Language } from "./lib/constants.js";
-import { getConfig } from "./lib/registry.js";
-import { detectFrameworks, detectPackageManager, detectLanguage } from "./lib/detection.js";
-import { agentRunner } from "./lib/agent-runner.js";
+import {
+  Integration,
+  INTEGRATION_LABELS,
+  DEFAULT_BASE_URL,
+  type Language,
+} from "./lib/constants.js";
+import { getConfig, getConfigsForLanguage } from "./lib/registry.js";
+import {
+  detectFrameworks,
+  detectPackageManager,
+  detectLanguage,
+  detectLogLibraries,
+} from "./lib/detection.js";
+import { agentRunner, type ExistingAppSummary } from "./lib/agent-runner.js";
 import { browserAuth } from "./lib/browser-auth.js";
+import { buildApiHelperScript } from "./lib/api-helper.js";
+import { listApps, type ExistingApp } from "./lib/api-client.js";
+import {
+  detectOtelInstalled,
+  getOtelConfigs,
+  promptObservabilityMode,
+} from "./lib/observability.js";
+import { selectOrCreateApp } from "./lib/app-selection.js";
 import {
   showBanner,
   selectOne,
@@ -13,36 +31,6 @@ import {
   showStatus,
   showSuccess,
 } from "./lib/tui.js";
-
-function buildApiHelper(opts: { apiKey: string; tenantId: string; baseUrl: string }): string {
-  return `const BASE = ${JSON.stringify(opts.baseUrl)};
-const HEADERS = {
-  "X-API-Key": ${JSON.stringify(opts.apiKey)},
-  "x-tenant-id": ${JSON.stringify(opts.tenantId)},
-  "Content-Type": "application/json",
-};
-
-async function api(method, path, body) {
-  const res = await fetch(BASE + path, {
-    method,
-    headers: HEADERS,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  if (!res.ok) { console.error("ERROR", res.status, text); process.exit(1); }
-  try { console.log(JSON.stringify(JSON.parse(text), null, 2)); } catch { console.log(text); }
-}
-
-const [,, cmd, ...args] = process.argv;
-switch (cmd) {
-  case "list-apps":      api("GET",  "/apps"); break;
-  case "create-app":     api("POST", "/apps", { name: args[0] }); break;
-  case "list-channels":  api("GET",  "/channel?appId=" + args[0]); break;
-  case "create-channel": api("POST", "/channel", { name: args[0], appId: Number(args[1]) }); break;
-  default: console.error("Unknown command:", cmd); process.exit(1);
-}
-`;
-}
 
 interface WizardArgs {
   integrations?: string[];
@@ -53,94 +41,67 @@ interface WizardArgs {
   language?: Language;
 }
 
-const PYTHON_FRAMEWORKS: Integration[] = [
-  Integration.langchain,
-  Integration.openaiAgents,
-  Integration.anthropic,
-  Integration.crewai,
-  Integration.deepAgents,
-];
+function toExistingAppSummary(app: ExistingApp): ExistingAppSummary {
+  return {
+    id: app.id,
+    name: app.name,
+    channels: app.channels.map((c) => ({ id: c.id, name: c.name })),
+  };
+}
 
-const TS_FRAMEWORKS: Integration[] = [
-  Integration.langchain,
-  Integration.langgraph,
-  Integration.openaiAgents,
-  Integration.anthropic,
-  Integration.vercelAi,
-  Integration.mastra,
-  Integration.googleAdk,
-  Integration.llamaindex,
-];
+async function resolveLanguage(projectDir: string, requested: Language | undefined): Promise<Language> {
+  if (requested) return requested;
+  const detected = detectLanguage(projectDir);
+  if (detected !== "both") return detected;
+  showBanner({ projectDir });
+  return selectOne<Language>("Both Python and TypeScript detected. Which SDK?", [
+    { label: "TypeScript (@axonpush/sdk)", value: "typescript" },
+    { label: "Python (axonpush)", value: "python" },
+  ]);
+}
 
-export async function run(args: WizardArgs): Promise<void> {
-  const projectDir = args.installDir || process.cwd();
-  const baseUrl = args.baseUrl || DEFAULT_BASE_URL;
-
-  let language: Language;
-  if (args.language) {
-    language = args.language;
-  } else {
-    const detected = detectLanguage(projectDir);
-    if (detected === "both") {
-      showBanner({ projectDir });
-      language = await selectOne("Both Python and TypeScript detected. Which SDK?", [
-        { label: "TypeScript (@axonpush/sdk)", value: "typescript" as const },
-        { label: "Python (axonpush)", value: "python" as const },
-      ]);
-    } else {
-      language = detected;
-    }
+async function resolveIntegrations(
+  args: WizardArgs,
+  language: Language,
+  projectDir: string,
+): Promise<Integration[]> {
+  if (args.integrations && args.integrations.length > 0) {
+    return args.integrations.filter((i): i is Integration =>
+      Object.values(Integration).includes(i as Integration),
+    ) as Integration[];
   }
 
-  const pkgMgr = detectPackageManager(projectDir, language);
-  showBanner({ projectDir, language, pkgMgr });
-
-  const supportedFrameworks = language === "typescript" ? TS_FRAMEWORKS : PYTHON_FRAMEWORKS;
+  const supported = getConfigsForLanguage(language).map((c) => c.integration);
+  const detected = new Set(detectFrameworks(projectDir, language));
   const customIntegration = language === "typescript" ? Integration.tsCustom : Integration.custom;
 
-  let integrations: Integration[] = [];
-  if (args.integrations && args.integrations.length > 0) {
-    for (const integ of args.integrations) {
-      if (integ in Integration) {
-        integrations.push(integ as Integration);
-      }
-    }
-  }
-
-  if (integrations.length === 0) {
-    const detected = detectFrameworks(projectDir, language);
-    const detectedSet = new Set(detected);
-
-    const choices = supportedFrameworks.map((integ) => ({
-      label: INTEGRATION_LABELS[integ] + (detectedSet.has(integ) ? " (detected)" : ""),
+  const choices = supported
+    .filter((i) => i !== customIntegration)
+    .map((integ) => ({
+      label: INTEGRATION_LABELS[integ] + (detected.has(integ) ? " (detected)" : ""),
       value: integ,
-      preselected: detectedSet.has(integ),
+      preselected: detected.has(integ),
     }));
 
-    choices.push({
-      label: INTEGRATION_LABELS[customIntegration],
-      value: customIntegration,
-      preselected: false,
-    });
+  choices.push({
+    label: INTEGRATION_LABELS[customIntegration],
+    value: customIntegration,
+    preselected: false,
+  });
 
-    integrations = await selectMany("Select framework(s) to integrate:", choices);
+  return selectMany<Integration>("Select framework(s) to integrate:", choices);
+}
 
-    if (integrations.length === 0) {
-      process.exit(1);
-    }
-  }
-
-  const configs = integrations
-    .map((i) => getConfig(language, i))
-    .filter((c): c is NonNullable<typeof c> => c != null);
-
+async function resolveCredentials(
+  args: WizardArgs,
+): Promise<{ apiKey: string; tenantId: string }> {
   let apiKey = args.apiKey;
   let tenantId = args.tenantId;
 
   if (!apiKey) {
-    const method = await selectOne("How would you like to authenticate?", [
-      { label: "Log in via browser (recommended)", value: "browser" as const },
-      { label: "Enter API key manually", value: "manual" as const },
+    const method = await selectOne<"browser" | "manual">("How would you like to authenticate?", [
+      { label: "Log in via browser (recommended)", value: "browser" },
+      { label: "Enter API key manually", value: "manual" },
     ]);
 
     if (method === "browser") {
@@ -165,9 +126,70 @@ export async function run(args: WizardArgs): Promise<void> {
     if (!tenantId) process.exit(0);
   }
 
+  return { apiKey, tenantId };
+}
+
+async function fetchExistingAppSelection(
+  projectDir: string,
+  apiKey: string,
+  tenantId: string,
+  baseUrl: string,
+): Promise<ExistingAppSummary | undefined> {
+  const status = showStatus("Fetching your existing AxonPush apps...");
+  let apps: ExistingApp[] = [];
+  try {
+    apps = await listApps({ apiKey, tenantId, baseUrl });
+    status.done(
+      apps.length === 0
+        ? "No existing apps found."
+        : `Found ${apps.length} existing app${apps.length === 1 ? "" : "s"}.`,
+    );
+  } catch (err) {
+    status.fail(`Couldn't fetch apps (${err instanceof Error ? err.message : String(err)}); proceeding as new.`);
+    return undefined;
+  }
+
+  if (apps.length === 0) return undefined;
+
+  const selection = await selectOrCreateApp(apps, projectDir);
+  if ("create" in selection) return undefined;
+  return toExistingAppSummary(selection.reuse);
+}
+
+export async function run(args: WizardArgs): Promise<void> {
+  const projectDir = args.installDir || process.cwd();
+  const baseUrl = args.baseUrl || DEFAULT_BASE_URL;
+
+  const language = await resolveLanguage(projectDir, args.language);
+  const pkgMgr = detectPackageManager(projectDir, language);
+  showBanner({ projectDir, language, pkgMgr });
+
+  const otelDetected = detectOtelInstalled(projectDir, language);
+  const observabilityMode = await promptObservabilityMode({ otelDetected });
+
+  const integrations: Integration[] = observabilityMode === "otel"
+    ? []
+    : await resolveIntegrations(args, language, projectDir);
+
+  if (observabilityMode !== "otel" && integrations.length === 0) {
+    process.exit(1);
+  }
+
+  const frameworkConfigs = integrations
+    .map((i) => getConfig(language, i))
+    .filter((c): c is NonNullable<typeof c> => c != null);
+
+  const configs = observabilityMode === "agent"
+    ? frameworkConfigs
+    : [...frameworkConfigs, ...getOtelConfigs(language)];
+
+  const { apiKey, tenantId } = await resolveCredentials(args);
+
+  const existingApp = await fetchExistingAppSelection(projectDir, apiKey, tenantId, baseUrl);
+  const logLibraries = detectLogLibraries(projectDir, language);
+
   const helperPath = path.join(projectDir, ".axonpush-api-helper.mjs");
-  const helperScript = buildApiHelper({ apiKey, tenantId, baseUrl });
-  fs.writeFileSync(helperPath, helperScript);
+  fs.writeFileSync(helperPath, buildApiHelperScript({ apiKey, tenantId, baseUrl }));
 
   const status = showStatus("Running Claude Code agent...");
 
@@ -181,6 +203,9 @@ export async function run(args: WizardArgs): Promise<void> {
         apiKey,
         tenantId,
         baseUrl,
+        observabilityMode,
+        existingApp,
+        logLibraries,
       },
       (msg) => {
         status.update(msg);

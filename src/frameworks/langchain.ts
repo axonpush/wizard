@@ -15,4 +15,5 @@ export const LANGCHAIN_CONFIG: FrameworkConfig = {
       'Add AxonPushCallbackHandler to chain.invoke() via config={"callbacks": [handler]}',
   },
   skillDir: "skills/langchain",
+  commandmentGroup: Integration.langchain,
 };

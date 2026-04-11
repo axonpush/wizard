@@ -15,4 +15,5 @@ export const OPENAI_AGENTS_CONFIG: FrameworkConfig = {
       "Add AxonPushRunHooks as the hooks parameter to Runner.run(agent, input, hooks=hooks)",
   },
   skillDir: "skills/openai-agents",
+  commandmentGroup: Integration.openaiAgents,
 };

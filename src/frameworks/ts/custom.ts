@@ -15,4 +15,5 @@ export const TS_CUSTOM_CONFIG: FrameworkConfig = {
       "Create an AxonPush client and use client.events.publish() to send events from your code",
   },
   skillDir: "skills/ts-custom",
+  commandmentGroup: Integration.tsCustom,
 };
