@@ -20,6 +20,11 @@ function isLikelyMatch(appName: string, projectBasename: string): boolean {
   return a.includes(p) || p.includes(a);
 }
 
+export function hasLikelyMatchForProject(apps: ExistingApp[], projectDir: string): boolean {
+  const projectBasename = path.basename(projectDir);
+  return apps.some((app) => isLikelyMatch(app.name, projectBasename));
+}
+
 function sortApps(apps: ExistingApp[]): ExistingApp[] {
   return [...apps].sort((a, b) => {
     const at = a.updatedAt ?? a.createdAt ?? "";
@@ -76,6 +81,7 @@ export async function selectOrCreateApp(
   projectDir: string,
 ): Promise<AppSelection> {
   if (apps.length === 0) return { create: true };
+  if (!hasLikelyMatchForProject(apps, projectDir)) return { create: true };
 
   const projectBasename = path.basename(projectDir);
   const sorted = sortApps(apps);

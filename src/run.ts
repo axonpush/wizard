@@ -22,7 +22,7 @@ import {
   getOtelConfigs,
   promptObservabilityMode,
 } from "./lib/observability.js";
-import { selectOrCreateApp } from "./lib/app-selection.js";
+import { hasLikelyMatchForProject, selectOrCreateApp } from "./lib/app-selection.js";
 import {
   showBanner,
   selectOne,
@@ -139,17 +139,24 @@ async function fetchExistingAppSelection(
   let apps: ExistingApp[] = [];
   try {
     apps = await listApps({ apiKey, tenantId, baseUrl });
-    status.done(
-      apps.length === 0
-        ? "No existing apps found."
-        : `Found ${apps.length} existing app${apps.length === 1 ? "" : "s"}.`,
-    );
   } catch (err) {
     status.fail(`Couldn't fetch apps (${err instanceof Error ? err.message : String(err)}); proceeding as new.`);
     return undefined;
   }
 
-  if (apps.length === 0) return undefined;
+  if (apps.length === 0) {
+    status.done("No existing apps found.");
+    return undefined;
+  }
+
+  if (!hasLikelyMatchForProject(apps, projectDir)) {
+    status.done(
+      `Found ${apps.length} existing app${apps.length === 1 ? "" : "s"}, none look reusable for this project — creating a new one.`,
+    );
+    return undefined;
+  }
+
+  status.done(`Found ${apps.length} existing app${apps.length === 1 ? "" : "s"}.`);
 
   const selection = await selectOrCreateApp(apps, projectDir);
   if ("create" in selection) return undefined;
