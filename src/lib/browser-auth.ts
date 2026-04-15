@@ -1,7 +1,7 @@
 import http from "http";
 import { exec } from "child_process";
 
-const DASHBOARD_URL = "https://axonpush.xyz";
+const DASHBOARD_URL = "https://app.axonpush.xyz";
 const TIMEOUT_MS = 120_000;
 
 interface AuthResult {

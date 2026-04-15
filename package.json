@@ -1,6 +1,6 @@
 {
   "name": "@axonpush/wizard",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "AI-powered wizard to integrate AxonPush into your AI agent project",
   "type": "module",
   "bin": {
