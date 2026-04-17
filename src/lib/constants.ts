@@ -41,3 +41,4 @@ export const OBSERVABILITY_MODE_LABELS: Record<ObservabilityMode, string> = {
 };
 
 export const DEFAULT_BASE_URL = "https://api.axonpush.xyz";
+export const DEFAULT_APP_URL = "https://app.axonpush.xyz";

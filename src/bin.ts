@@ -29,7 +29,11 @@ yargs(hideBin(process.argv))
   })
   .option("base-url", {
     type: "string",
-    describe: "AxonPush server URL",
+    describe: "AxonPush API URL (for self-hosted: https://api.your-domain)",
+  })
+  .option("app-url", {
+    type: "string",
+    describe: "AxonPush dashboard URL used for browser auth (for self-hosted: https://app.your-domain)",
   })
   .option("install-dir", {
     type: "string",
@@ -53,7 +57,8 @@ yargs(hideBin(process.argv))
         language: argv.language as "python" | "typescript" | undefined,
         apiKey: argv["api-key"] as string | undefined,
         tenantId: argv["tenant-id"] as string | undefined,
-        baseUrl: argv["base-url"] as string | undefined,
+        baseUrl: (argv["base-url"] as string | undefined) ?? process.env.AXONPUSH_BASE_URL,
+        appUrl: (argv["app-url"] as string | undefined) ?? process.env.AXONPUSH_APP_URL,
         installDir: argv["install-dir"] as string | undefined,
       });
     },

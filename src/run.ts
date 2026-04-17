@@ -4,6 +4,7 @@ import {
   Integration,
   INTEGRATION_LABELS,
   DEFAULT_BASE_URL,
+  DEFAULT_APP_URL,
   type Language,
 } from "./lib/constants.js";
 import { getConfig, getConfigsForLanguage } from "./lib/registry.js";
@@ -37,6 +38,7 @@ interface WizardArgs {
   apiKey?: string;
   tenantId?: string;
   baseUrl?: string;
+  appUrl?: string;
   installDir?: string;
   language?: Language;
 }
@@ -94,6 +96,7 @@ async function resolveIntegrations(
 
 async function resolveCredentials(
   args: WizardArgs,
+  appUrl: string,
 ): Promise<{ apiKey: string; tenantId: string }> {
   let apiKey = args.apiKey;
   let tenantId = args.tenantId;
@@ -107,7 +110,7 @@ async function resolveCredentials(
     if (method === "browser") {
       const status = showStatus("Opening browser for authentication...");
       try {
-        const result = await browserAuth();
+        const result = await browserAuth(appUrl);
         apiKey = result.apiKey;
         tenantId = result.tenantId;
         status.done("Authenticated via browser!");
@@ -166,6 +169,7 @@ async function fetchExistingAppSelection(
 export async function run(args: WizardArgs): Promise<void> {
   const projectDir = args.installDir || process.cwd();
   const baseUrl = args.baseUrl || DEFAULT_BASE_URL;
+  const appUrl = args.appUrl || DEFAULT_APP_URL;
 
   const language = await resolveLanguage(projectDir, args.language);
   const pkgMgr = detectPackageManager(projectDir, language);
@@ -190,7 +194,7 @@ export async function run(args: WizardArgs): Promise<void> {
     ? frameworkConfigs
     : [...frameworkConfigs, ...getOtelConfigs(language)];
 
-  const { apiKey, tenantId } = await resolveCredentials(args);
+  const { apiKey, tenantId } = await resolveCredentials(args, appUrl);
 
   const existingApp = await fetchExistingAppSelection(projectDir, apiKey, tenantId, baseUrl);
   const logLibraries = detectLogLibraries(projectDir, language);
@@ -223,7 +227,7 @@ export async function run(args: WizardArgs): Promise<void> {
     showSuccess([
       "Next steps:",
       "  1. Run your agent and check the AxonPush dashboard",
-      "  2. View traces at https://axonpush.xyz/traces",
+      `  2. View traces at ${appUrl}`,
     ]);
   } catch (error) {
     status.fail(`Agent failed: ${error instanceof Error ? error.message : error}`);

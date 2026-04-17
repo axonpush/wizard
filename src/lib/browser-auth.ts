@@ -1,7 +1,6 @@
 import http from "http";
 import { exec } from "child_process";
 
-const DASHBOARD_URL = "https://app.axonpush.xyz";
 const TIMEOUT_MS = 120_000;
 
 interface AuthResult {
@@ -19,7 +18,7 @@ function openBrowser(url: string): void {
   exec(cmd);
 }
 
-export function browserAuth(): Promise<AuthResult> {
+export function browserAuth(appUrl: string): Promise<AuthResult> {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const url = new URL(req.url!, `http://${req.headers.host}`);
@@ -46,7 +45,7 @@ export function browserAuth(): Promise<AuthResult> {
 
     server.listen(0, "127.0.0.1", () => {
       const port = (server.address() as { port: number }).port;
-      const authUrl = `${DASHBOARD_URL}/wizard-auth?port=${port}`;
+      const authUrl = `${appUrl}/wizard-auth?port=${port}`;
       openBrowser(authUrl);
     });
 
