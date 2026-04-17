@@ -21,8 +21,29 @@ The wizard will:
 --integration, -i   Framework integration(s), comma-separated. See tables below.
 --api-key           AxonPush API key
 --tenant-id         AxonPush tenant/organization ID
---base-url          AxonPush server URL (default: https://api.axonpush.xyz)
+--base-url          AxonPush API URL (default: https://api.axonpush.xyz)
+--app-url           AxonPush dashboard URL used for browser auth (default: https://app.axonpush.xyz)
 --install-dir       Project directory (default: current directory)
+```
+
+`--base-url` and `--app-url` also accept env-var fallbacks: `AXONPUSH_BASE_URL` and `AXONPUSH_APP_URL`.
+
+## Self-hosted axonpush
+
+Point the wizard at your own deployment:
+
+```bash
+npx @axonpush/wizard \
+  --base-url https://api.your-domain \
+  --app-url  https://app.your-domain
+```
+
+Or via environment variables (handy for CI):
+
+```bash
+export AXONPUSH_BASE_URL=https://api.your-domain
+export AXONPUSH_APP_URL=https://app.your-domain
+npx @axonpush/wizard
 ```
 
 ## Non-interactive
