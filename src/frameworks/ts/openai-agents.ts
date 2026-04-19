@@ -15,5 +15,6 @@ export const TS_OPENAI_AGENTS_CONFIG: FrameworkConfig = {
       "Create AxonPushRunHooks and pass as the hooks parameter to Runner.run(agent, input, { hooks })",
   },
   skillDir: "skills/ts-openai-agents",
+  remoteSkillKey: "OpenAI Agents",
   commandmentGroup: Integration.openaiAgents,
 };

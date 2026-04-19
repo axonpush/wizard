@@ -15,5 +15,6 @@ export const TS_GOOGLE_ADK_CONFIG: FrameworkConfig = {
       "Create axonPushADKCallbacks and register beforeAgent/afterAgent/beforeModel/afterModel/beforeTool/afterTool callbacks",
   },
   skillDir: "skills/ts-google-adk",
+  remoteSkillKey: "Google ADK",
   commandmentGroup: Integration.googleAdk,
 };

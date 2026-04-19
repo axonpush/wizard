@@ -13,6 +13,11 @@ const CORE_PYTHON: string[] = [
   "Create the AxonPush client as a module-level singleton, not inside each function call.",
   "Use int(os.environ['AXONPUSH_CHANNEL_ID']) for channel_id. Never hardcode channel IDs.",
   "Follow DRY principles: if multiple files need the same AxonPush client setup, create a shared helper module and import from it.",
+  "Add type hints to all functions and variables you create or modify.",
+  "For async frameworks (OpenAI Agents SDK, async LangChain), use AsyncAxonPush with `async with AsyncAxonPush(...) as client:` context manager pattern.",
+  "Centralize AxonPush configuration in a dedicated module (e.g., axonpush_config.py). Export the configured client and handlers. Other modules import from this single source.",
+  "If the project uses pydantic or pydantic-settings, define an AxonPushSettings(BaseSettings) class for credentials. Otherwise use a @dataclass with field(default_factory=lambda: os.environ[...]) to centralize env access.",
+  "Never scatter bare os.environ['AXONPUSH_...'] lookups across multiple files. All env var access goes through the config module.",
   "When done, briefly summarize what files were changed and what the user should do next.",
 ];
 
@@ -56,19 +61,21 @@ const PYTHON_COMMANDMENTS: Partial<Record<CommandmentGroup, string[]>> = {
     "For LangChain: add handler via config={'callbacks': [handler]} in chain.invoke() or agent_executor.invoke().",
   ],
   [Integration.openaiAgents]: [
-    "For OpenAI Agents: pass hooks=hooks to Runner.run().",
+    "For OpenAI Agents: use AsyncAxonPush (not sync AxonPush) — the Agents SDK is async-only.",
+    "For OpenAI Agents: pass hooks=axonpush_hooks to Runner.run(agent, input, hooks=axonpush_hooks).",
   ],
   [Integration.anthropic]: [
     "For Anthropic: wrap messages.create() with tracer.create_message() or tracer.acreate_message().",
   ],
   [Integration.crewai]: [
     "For CrewAI: add step_callback=callbacks.on_step and task_callback=callbacks.on_task_complete to Crew().",
+    "For CrewAI: call callbacks.on_crew_start() before crew.kickoff() and callbacks.on_crew_end(result) after.",
   ],
   [Integration.deepAgents]: [
-    "For Deep Agents: install the LangChain callback handler on the underlying agent executor.",
+    "For Deep Agents: use AxonPushDeepAgentHandler from axonpush.integrations.deepagents — NOT the base LangChain handler. Pass via config={'callbacks': [handler]} to agent.invoke(). It auto-traces planning, subagent spawns, filesystem ops, and sandbox execution.",
   ],
   [Integration.custom]: [
-    "For custom/unsupported Python frameworks: wire the AxonPush client directly via trace.start_span / trace.end_span around the entry point.",
+    "For custom/unsupported Python frameworks: use client.events.publish() to send events at key points (start, end, error). Use EventType enum for event categorization.",
   ],
 };
 
@@ -100,7 +107,7 @@ const TS_COMMANDMENTS: Partial<Record<CommandmentGroup, string[]>> = {
     "For LlamaIndex: call handler.onQueryStart/onLLMStart/onLLMEnd/onRetrieverStart/onRetrieverEnd at lifecycle points.",
   ],
   [Integration.tsCustom]: [
-    "For custom/unsupported TS frameworks: wire the AxonPush client directly via trace.startSpan / trace.endSpan around the entry point.",
+    "For custom/unsupported TS frameworks: use client.events.publish() to send events at key points. Use eventType 'custom' or specific event type strings.",
   ],
 };
 

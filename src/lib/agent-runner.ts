@@ -7,6 +7,7 @@ import type { PackageManager } from "./detection.js";
 import type { LogLibrary } from "./detection.js";
 import { getLogIntegrationSnippet } from "./detection.js";
 import { runAgent } from "./agent-interface.js";
+import { prefetchSkills } from "./skill-fetcher.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +28,7 @@ export interface RunnerOptions {
   observabilityMode: ObservabilityMode;
   existingApp?: ExistingAppSummary;
   logLibraries: LogLibrary[];
+  skillContent?: Map<Integration, string>;
 }
 
 function readSkill(skillDir: string): string {
@@ -58,7 +60,7 @@ function buildPyInstallCmd(pm: PackageManager, configs: FrameworkConfig[]): stri
 
 function buildTsInstallCmd(pm: PackageManager, configs: FrameworkConfig[]): string {
   const extraPackages = dedupe(configs.flatMap((c) => c.extraTsPackages ?? []));
-  const packages = ["@axonpush/sdk", ...extraPackages].join(" ");
+  const packages = ["@axonpush/sdk@latest", ...extraPackages].join(" ");
   const cmds: Record<string, string> = {
     bun: `bun add ${packages}`,
     pnpm: `pnpm add ${packages}`,
@@ -138,7 +140,8 @@ function buildPrompt(opts: RunnerOptions): string {
 
   const frameworkSections = opts.configs
     .map((c) => {
-      const skill = readSkill(c.skillDir);
+      const remoteSkill = opts.skillContent?.get(c.integration);
+      const skill = remoteSkill || readSkill(c.skillDir);
       return `### ${c.name}
 - Integration hint: ${c.prompts.integrationHint}
 ${skill ? `\n#### Skill Reference: ${c.name}\n\n${skill}` : ""}`;
@@ -229,6 +232,10 @@ ${channelStep}
 
 ${frameworkSections || "(No framework callbacks to install in this mode.)"}
 
+IMPORTANT: You MUST integrate AxonPush into ALL frameworks listed above. Do not skip any framework.
+Each framework has its own integration class and pattern — follow the skill reference for each one.
+If multiple frameworks are detected, create separate handler/hooks instances for each and wire them into the appropriate entry points.
+
 ${loggerSection}When done, summarize: what app and channels you used, and what code you changed.`;
 }
 
@@ -236,6 +243,9 @@ export async function agentRunner(
   opts: RunnerOptions,
   onStatus: (msg: string) => void,
 ): Promise<void> {
+  if (!opts.skillContent) {
+    opts.skillContent = await prefetchSkills(opts.language);
+  }
   const prompt = buildPrompt(opts);
   const groups = resolveCommandmentGroups(opts.configs, opts.observabilityMode);
   await runAgent(prompt, opts.projectDir, onStatus, opts.language, groups);

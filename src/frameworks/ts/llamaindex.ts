@@ -15,5 +15,6 @@ export const TS_LLAMAINDEX_CONFIG: FrameworkConfig = {
       "Create AxonPushLlamaIndexHandler and call onLLMStart/onLLMEnd, onRetrieverStart/onRetrieverEnd, onQueryStart/onQueryEnd at the appropriate points",
   },
   skillDir: "skills/ts-llamaindex",
+  remoteSkillKey: "LlamaIndex",
   commandmentGroup: Integration.llamaindex,
 };

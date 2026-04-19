@@ -15,6 +15,7 @@ import {
   detectLogLibraries,
 } from "./lib/detection.js";
 import { agentRunner, type ExistingAppSummary } from "./lib/agent-runner.js";
+import { prefetchSkills } from "./lib/skill-fetcher.js";
 import { browserAuth } from "./lib/browser-auth.js";
 import { buildApiHelperScript } from "./lib/api-helper.js";
 import { listApps, type ExistingApp } from "./lib/api-client.js";
@@ -175,6 +176,8 @@ export async function run(args: WizardArgs): Promise<void> {
   const pkgMgr = detectPackageManager(projectDir, language);
   showBanner({ projectDir, language, pkgMgr });
 
+  const skillPromise = prefetchSkills(language);
+
   const otelDetected = detectOtelInstalled(projectDir, language);
   const observabilityMode = await promptObservabilityMode({ otelDetected });
 
@@ -202,6 +205,8 @@ export async function run(args: WizardArgs): Promise<void> {
   const helperPath = path.join(projectDir, ".axonpush-api-helper.mjs");
   fs.writeFileSync(helperPath, buildApiHelperScript({ apiKey, tenantId, baseUrl }));
 
+  const skillContent = await skillPromise;
+
   const status = showStatus("Running Claude Code agent...");
 
   try {
@@ -217,6 +222,7 @@ export async function run(args: WizardArgs): Promise<void> {
         observabilityMode,
         existingApp,
         logLibraries,
+        skillContent,
       },
       (msg) => {
         status.update(msg);

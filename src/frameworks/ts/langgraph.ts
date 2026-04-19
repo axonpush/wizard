@@ -15,5 +15,6 @@ export const TS_LANGGRAPH_CONFIG: FrameworkConfig = {
       'Add AxonPushLangGraphHandler to graph.invoke() via config: { callbacks: [handler] }. It extends the LangChain handler with graph node-level tracing.',
   },
   skillDir: "skills/ts-langgraph",
+  remoteSkillKey: "LangGraph",
   commandmentGroup: Integration.langgraph,
 };

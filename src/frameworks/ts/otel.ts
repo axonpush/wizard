@@ -20,6 +20,7 @@ export const OTEL_TS_CONFIG: FrameworkConfig = {
       "Attach AxonPushSpanExporter from '@axonpush/sdk/integrations/otel' to the project's TracerProvider via BatchSpanProcessor. Reuse an existing provider if one is already registered.",
   },
   skillDir: "skills/otel-ts",
+  remoteSkillKey: "OpenTelemetry",
   internal: true,
   extraTsPackages: ["@opentelemetry/api", "@opentelemetry/sdk-trace-base", "@opentelemetry/sdk-trace-node"],
   commandmentGroup: Integration.otel,

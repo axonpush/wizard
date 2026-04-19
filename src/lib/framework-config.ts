@@ -15,6 +15,7 @@ export interface FrameworkConfig {
     integrationHint: string;
   };
   skillDir: string;
+  remoteSkillKey?: string;
   internal?: boolean;
   extraTsPackages?: string[];
   commandmentGroup?: CommandmentGroup;

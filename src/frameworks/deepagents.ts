@@ -15,5 +15,6 @@ export const DEEPAGENTS_CONFIG: FrameworkConfig = {
       'Add AxonPushDeepAgentHandler to agent.invoke() via config={"callbacks": [handler]}. It auto-traces planning, subagent, filesystem, and sandbox tool calls.',
   },
   skillDir: "skills/deepagents",
+  remoteSkillKey: "Deep Agents",
   commandmentGroup: Integration.deepAgents,
 };

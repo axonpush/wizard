@@ -15,6 +15,7 @@ export const OTEL_PYTHON_CONFIG: FrameworkConfig = {
       "Attach AxonPushSpanExporter from axonpush.integrations.otel to the project's TracerProvider via BatchSpanProcessor. Reuse an existing provider if one is already registered.",
   },
   skillDir: "skills/otel-python",
+  remoteSkillKey: "OpenTelemetry",
   internal: true,
   commandmentGroup: Integration.otel,
 };

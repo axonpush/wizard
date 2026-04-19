@@ -15,5 +15,6 @@ export const TS_VERCEL_AI_CONFIG: FrameworkConfig = {
       "Create axonPushMiddleware and pass it as experimental_telemetry middleware to generateText/streamText, or wrap the model with wrapLanguageModel()",
   },
   skillDir: "skills/ts-vercel-ai",
+  remoteSkillKey: "Vercel AI",
   commandmentGroup: Integration.vercelAi,
 };

@@ -15,5 +15,6 @@ export const ANTHROPIC_CONFIG: FrameworkConfig = {
       "Wrap anthropic_client.messages.create() with tracer.create_message() or tracer.acreate_message()",
   },
   skillDir: "skills/anthropic",
+  remoteSkillKey: "Anthropic",
   commandmentGroup: Integration.anthropic,
 };
