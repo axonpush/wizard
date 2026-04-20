@@ -42,6 +42,9 @@ interface WizardArgs {
   appUrl?: string;
   installDir?: string;
   language?: Language;
+  environment?: string;
+  credentialType?: "ak" | "pt";
+  sentry?: boolean;
 }
 
 function toExistingAppSummary(app: ExistingApp): ExistingAppSummary {
@@ -202,6 +205,26 @@ export async function run(args: WizardArgs): Promise<void> {
   const existingApp = await fetchExistingAppSelection(projectDir, apiKey, tenantId, baseUrl);
   const logLibraries = detectLogLibraries(projectDir, language);
 
+  let environmentSelection: { slug: string; id: number } | null = null;
+  if (existingApp) {
+    try {
+      const { promptEnvironment } = await import("./lib/environment.js");
+      const result = await promptEnvironment(
+        { apiKey, tenantId, baseUrl },
+        existingApp.id,
+        args.environment,
+      );
+      if (result) {
+        environmentSelection = {
+          slug: result.environment.slug,
+          id: result.environment.id,
+        };
+      }
+    } catch {
+      // Environments flag off on the server; continue without env selection.
+    }
+  }
+
   const helperPath = path.join(projectDir, ".axonpush-api-helper.mjs");
   fs.writeFileSync(helperPath, buildApiHelperScript({ apiKey, tenantId, baseUrl }));
 
@@ -223,6 +246,8 @@ export async function run(args: WizardArgs): Promise<void> {
         existingApp,
         logLibraries,
         skillContent,
+        environment: environmentSelection?.slug,
+        enableSentry: args.sentry,
       },
       (msg) => {
         status.update(msg);
