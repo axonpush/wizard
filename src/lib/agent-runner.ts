@@ -29,6 +29,10 @@ export interface RunnerOptions {
   existingApp?: ExistingAppSummary;
   logLibraries: LogLibrary[];
   skillContent?: Map<Integration, string>;
+  /** Slug of the environment this setup targets (e.g. 'production'). */
+  environment?: string;
+  /** When true, also generate a Sentry SDK integration snippet. */
+  enableSentry?: boolean;
 }
 
 function readSkill(skillDir: string): string {
@@ -219,14 +223,14 @@ ${channelStep}
 5. **Update .env** in the project root with credentials and channel IDs:
    - AXONPUSH_API_KEY=${opts.apiKey}
    - AXONPUSH_TENANT_ID=${opts.tenantId}
-   - AXONPUSH_BASE_URL=${opts.baseUrl}
+   - AXONPUSH_BASE_URL=${opts.baseUrl}${opts.environment ? `\n   - AXONPUSH_ENVIRONMENT=${opts.environment}` : ""}
    - Add a channel ID env var for each channel you are using (e.g. AXONPUSH_CHANNEL_ID_RAG=5)
 
    If .env already exists, append the AXONPUSH_ variables (don't overwrite existing vars).
 
 6. **Integrate the SDK** into each relevant entry point, using the appropriate channel ID env var.
    Never hardcode channel IDs — always read from ${envAccess}.
-   Use ${channelIdExpr} to parse the channel ID.${opts.language === "typescript" ? "\n   Make sure process.env values are available (e.g. via dotenv or framework built-in env loading)." : "\n   Make sure os is imported if using os.environ."}
+   Use ${channelIdExpr} to parse the channel ID.${opts.language === "typescript" ? "\n   Make sure process.env values are available (e.g. via dotenv or framework built-in env loading)." : "\n   Make sure os is imported if using os.environ."}${opts.environment ? `\n   When initializing the AxonPush client, pass \`environment="${opts.environment}"\` (Python) or \`environment: "${opts.environment}"\` (TypeScript) so every event is tagged with this deployment environment.` : ""}${opts.enableSentry ? `\n\n7. **Install Sentry SDK** pointing at AxonPush. Use the helper from the AxonPush SDK (${opts.language === "python" ? "`from axonpush import install_sentry; install_sentry(environment=\"" + (opts.environment ?? "production") + "\")`" : "`import { installSentry } from '@axonpush/sdk'; import * as Sentry from '@sentry/node'; installSentry(Sentry, { environment: '" + (opts.environment ?? "production") + "' });`"}). This builds the Sentry DSN automatically from AXONPUSH_API_KEY + AXONPUSH_CHANNEL_ID + AXONPUSH_HOST.` : ""}
 
 ## Frameworks
 

@@ -14,6 +14,25 @@ export interface Channel {
   name: string;
 }
 
+export interface Environment {
+  id: number;
+  name: string;
+  slug: string;
+  color: string;
+  isDefault: boolean;
+  isProduction: boolean;
+  isEphemeral: boolean;
+}
+
+export interface PublicIngestToken {
+  id: number;
+  name: string;
+  token: string;
+  prefix: string;
+  channelId: number;
+  environmentId: number;
+}
+
 function headers(opts: ApiOptions): Record<string, string> {
   return {
     "X-API-Key": opts.apiKey,
@@ -52,4 +71,31 @@ export async function getOrCreateApp(opts: ApiOptions, name: string): Promise<Ap
   const existing = apps.find((a) => a.name === name);
   if (existing) return existing;
   return createApp(opts, name);
+}
+
+export async function listEnvironments(
+  opts: ApiOptions,
+  appId: number,
+): Promise<Environment[]> {
+  try {
+    return await request<Environment[]>(opts, "GET", `/apps/${appId}/environments`);
+  } catch (err) {
+    if ((err as Error).message.includes("404")) return [];
+    throw err;
+  }
+}
+
+export async function createEnvironment(
+  opts: ApiOptions,
+  appId: number,
+  body: { name: string; slug?: string; color?: string },
+): Promise<Environment> {
+  return request<Environment>(opts, "POST", `/apps/${appId}/environments`, body);
+}
+
+export async function createPublicToken(
+  opts: ApiOptions,
+  body: { name: string; channelId: number; environmentId: number },
+): Promise<PublicIngestToken> {
+  return request<PublicIngestToken>(opts, "POST", `/public-tokens`, body);
 }

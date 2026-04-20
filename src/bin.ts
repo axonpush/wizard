@@ -39,6 +39,23 @@ yargs(hideBin(process.argv))
     type: "string",
     describe: "Project directory to integrate into (default: cwd)",
   })
+  .option("environment", {
+    alias: "e",
+    type: "string",
+    describe:
+      "Environment slug to target (e.g. production, staging, dev). Auto-detected from $NODE_ENV / $APP_ENV / $SENTRY_ENVIRONMENT if omitted.",
+  })
+  .option("credential-type", {
+    type: "string",
+    choices: ["ak", "pt"],
+    describe:
+      "Which credential to mint: 'ak' (server-side API key) or 'pt' (publish-only public token for browser/mobile).",
+  })
+  .option("sentry", {
+    type: "boolean",
+    default: false,
+    describe: "Generate a Sentry SDK integration (DSN + init snippet).",
+  })
   .option("debug", {
     type: "boolean",
     default: false,
@@ -60,6 +77,9 @@ yargs(hideBin(process.argv))
         baseUrl: (argv["base-url"] as string | undefined) ?? process.env.AXONPUSH_BASE_URL,
         appUrl: (argv["app-url"] as string | undefined) ?? process.env.AXONPUSH_APP_URL,
         installDir: argv["install-dir"] as string | undefined,
+        environment: argv.environment as string | undefined,
+        credentialType: argv["credential-type"] as "ak" | "pt" | undefined,
+        sentry: argv.sentry as boolean | undefined,
       });
     },
   )
