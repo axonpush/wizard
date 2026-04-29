@@ -3,4 +3,5 @@ dist/
 *.tsbuildinfo
 bun.lock
 .env
-.claude/settings.local.json
+.claude/
+CLAUDE.md
