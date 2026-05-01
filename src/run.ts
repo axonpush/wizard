@@ -205,24 +205,21 @@ export async function run(args: WizardArgs): Promise<void> {
   const existingApp = await fetchExistingAppSelection(projectDir, apiKey, tenantId, baseUrl);
   const logLibraries = detectLogLibraries(projectDir, language);
 
-  let environmentSelection: { slug: string; id: number } | null = null;
-  if (existingApp) {
-    try {
-      const { promptEnvironment } = await import("./lib/environment.js");
-      const result = await promptEnvironment(
-        { apiKey, tenantId, baseUrl },
-        existingApp.id,
-        args.environment,
-      );
-      if (result) {
-        environmentSelection = {
-          slug: result.environment.slug,
-          id: result.environment.id,
-        };
-      }
-    } catch {
-      // Environments flag off on the server; continue without env selection.
+  let environmentSelection: { slug: string; id: string } | null = null;
+  try {
+    const { promptEnvironment } = await import("./lib/environment.js");
+    const result = await promptEnvironment(
+      { apiKey, tenantId, baseUrl },
+      args.environment,
+    );
+    if (result) {
+      environmentSelection = {
+        slug: result.environment.slug,
+        id: result.environment.id,
+      };
     }
+  } catch {
+    // Environments flag off on the server; continue without env selection.
   }
 
   const helperPath = path.join(projectDir, ".axonpush-api-helper.mjs");

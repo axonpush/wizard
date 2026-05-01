@@ -30,10 +30,9 @@ export interface EnvironmentSelection {
 
 export async function promptEnvironment(
   opts: ApiOptions,
-  appId: number,
   preset?: string,
 ): Promise<EnvironmentSelection | null> {
-  const envs = await listEnvironments(opts, appId);
+  const envs = await listEnvironments(opts);
   if (envs.length === 0) {
     return null;
   }
@@ -41,7 +40,7 @@ export async function promptEnvironment(
   if (preset) {
     const match = envs.find((e) => e.slug === preset);
     if (match) return { environment: match };
-    const created = await createEnvironment(opts, appId, {
+    const created = await createEnvironment(opts, {
       name: preset.charAt(0).toUpperCase() + preset.slice(1),
       slug: preset,
     });
@@ -65,14 +64,14 @@ export async function promptEnvironment(
   choices.push({ label: "Create new environment…", value: "new" });
 
   const picked = await selectOne<string>(
-    "Which environment does this setup target?",
+    "Which environment does this setup target? (org-scoped)",
     choices,
   );
 
   if (!picked) return null;
 
   if (picked.startsWith("existing:")) {
-    const id = Number(picked.split(":")[1]);
+    const id = picked.slice("existing:".length);
     const env = envs.find((e) => e.id === id);
     if (!env) return null;
     return { environment: env };
@@ -91,7 +90,7 @@ export async function promptEnvironment(
     return null;
   }
 
-  const created = await createEnvironment(opts, appId, {
+  const created = await createEnvironment(opts, {
     name: slug.charAt(0).toUpperCase() + slug.slice(1),
     slug,
   });

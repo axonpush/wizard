@@ -15,7 +15,7 @@ export interface Channel {
 }
 
 export interface Environment {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   color: string;
@@ -30,7 +30,7 @@ export interface PublicIngestToken {
   token: string;
   prefix: string;
   channelId: number;
-  environmentId: number;
+  environmentId?: string;
 }
 
 function headers(opts: ApiOptions): Record<string, string> {
@@ -75,10 +75,9 @@ export async function getOrCreateApp(opts: ApiOptions, name: string): Promise<Ap
 
 export async function listEnvironments(
   opts: ApiOptions,
-  appId: number,
 ): Promise<Environment[]> {
   try {
-    return await request<Environment[]>(opts, "GET", `/apps/${appId}/environments`);
+    return await request<Environment[]>(opts, "GET", `/environments`);
   } catch (err) {
     if ((err as Error).message.includes("404")) return [];
     throw err;
@@ -87,15 +86,14 @@ export async function listEnvironments(
 
 export async function createEnvironment(
   opts: ApiOptions,
-  appId: number,
   body: { name: string; slug?: string; color?: string },
 ): Promise<Environment> {
-  return request<Environment>(opts, "POST", `/apps/${appId}/environments`, body);
+  return request<Environment>(opts, "POST", `/environments`, body);
 }
 
 export async function createPublicToken(
   opts: ApiOptions,
-  body: { name: string; channelId: number; environmentId: number },
+  body: { name: string; channelId: number; environmentId?: string },
 ): Promise<PublicIngestToken> {
   return request<PublicIngestToken>(opts, "POST", `/public-tokens`, body);
 }
