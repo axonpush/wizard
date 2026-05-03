@@ -1,89 +1,27 @@
 # @axonpush/wizard
 
-AI-powered wizard that integrates the [AxonPush](https://axonpush.xyz) SDK into your AI agent project using Claude Code. Supports both Python and TypeScript projects.
-
-## Usage
+Launcher for the [AxonPush](https://axonpush.xyz) integration skills. Installs the [`axonpush/skills`](https://github.com/axonpush/skills) bundle into your AI coding agent (Claude Code, Cursor, Codex, OpenCode, Cline, GitHub Copilot, Windsurf, Gemini, and 40+ others) and runs the `axonpush-integrate` orchestrator against your project.
 
 ```bash
 npx @axonpush/wizard
 ```
 
-The wizard will:
+That single command:
 
-1. Detect your project language (Python or TypeScript) and AI framework
-2. Ask for your AxonPush credentials (browser login or manual API key)
-3. Use Claude Code to install the SDK, create apps/channels, and add integration code
+1. Installs `axonpush/skills` via [`npx skills add`](https://skills.sh) — auto-detects which agent you have and writes to the right per-agent dir (`.claude/skills/`, `.cursor/skills/`, `.agents/skills/`).
+2. Invokes the first supported agent on your `PATH` and asks it to run the `axonpush-integrate` skill.
+3. The skill then walks you through: detect language + framework → browser-login (or paste creds) → pick or create app + channel → write `.env` → wire the SDK into your code via the matching framework sub-skill (LangChain, CrewAI, Anthropic, OpenAI Agents, Vercel AI, Mastra, LangGraph, LlamaIndex, Google ADK, OTel, or custom).
 
-## Options
-
-```
---language, -l      Project language (python, typescript). Auto-detected if omitted.
---integration, -i   Framework integration(s), comma-separated. See tables below.
---api-key           AxonPush API key
---tenant-id         AxonPush tenant/organization ID
---base-url          AxonPush API URL (default: https://api.axonpush.xyz)
---app-url           AxonPush dashboard URL used for browser auth (default: https://app.axonpush.xyz)
---install-dir       Project directory (default: current directory)
-```
-
-`--base-url` and `--app-url` also accept env-var fallbacks: `AXONPUSH_BASE_URL` and `AXONPUSH_APP_URL`.
-
-## Self-hosted axonpush
-
-Point the wizard at your own deployment:
+## Local development
 
 ```bash
-npx @axonpush/wizard \
-  --base-url https://api.your-domain \
-  --app-url  https://app.your-domain
+npx @axonpush/wizard --local /path/to/local/skills/checkout
 ```
 
-Or via environment variables (handy for CI):
+## Why this is just a launcher
 
-```bash
-export AXONPUSH_BASE_URL=https://api.your-domain
-export AXONPUSH_APP_URL=https://app.your-domain
-npx @axonpush/wizard
-```
+Earlier versions of this CLI bundled an Ink TUI and embedded the integration logic. Since the actual work is done by your AI coding agent following the skills, the wizard is now a tiny shim that installs the skills and starts the agent — keeping `npx @axonpush/wizard` working for everyone who has it bookmarked, while moving the maintainable surface to [`axonpush/skills`](https://github.com/axonpush/skills).
 
-## Non-interactive
+## License
 
-```bash
-npx @axonpush/wizard \
-  --language typescript \
-  --integration vercel-ai \
-  --api-key ak_your_key \
-  --tenant-id 1
-```
-
-## Supported Frameworks
-
-### Python
-
-| Framework | Install | Integration |
-|-----------|---------|-------------|
-| LangChain / LangGraph | `axonpush[langchain]` | Callback handler for chains and agents |
-| OpenAI Agents SDK | `axonpush[openai-agents]` | Run hooks for agent lifecycle |
-| Anthropic / Claude | `axonpush[anthropic]` | Tracer wrapping messages.create() |
-| CrewAI | `axonpush[crewai]` | Step and task callbacks |
-| Deep Agents | `axonpush[deepagents]` | Callback handler with deep agent awareness |
-| Custom | `axonpush` | Direct event publishing |
-
-### TypeScript
-
-| Framework | Install | Integration |
-|-----------|---------|-------------|
-| LangChain | `@axonpush/sdk` | `AxonPushCallbackHandler` for chains and agents |
-| LangGraph | `@axonpush/sdk` | `AxonPushLangGraphHandler` with graph node tracing |
-| OpenAI Agents SDK | `@axonpush/sdk` | `AxonPushRunHooks` for agent lifecycle |
-| Anthropic / Claude | `@axonpush/sdk` | `AxonPushAnthropicTracer` wrapping messages.create() |
-| Vercel AI SDK | `@axonpush/sdk` | `axonPushMiddleware` for generateText/streamText |
-| Mastra | `@axonpush/sdk` | `AxonPushMastraHooks` for workflows and tools |
-| Google ADK | `@axonpush/sdk` | `axonPushADKCallbacks` for agent/model/tool lifecycle |
-| LlamaIndex | `@axonpush/sdk` | `AxonPushLlamaIndexHandler` for queries and retrieval |
-| Custom | `@axonpush/sdk` | Direct event publishing via `client.events.publish()` |
-
-## Requirements
-
-- Node.js 20+
-- Claude Code CLI installed and authenticated
+MIT

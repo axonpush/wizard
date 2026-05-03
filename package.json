@@ -1,72 +1,33 @@
 {
   "name": "@axonpush/wizard",
   "version": "0.0.10",
-  "description": "AI-powered wizard to integrate AxonPush into your AI agent project",
+  "description": "Launcher: installs the axonpush/skills bundle and runs the integrate orchestrator in your AI coding agent.",
   "type": "module",
   "bin": {
-    "axonpush-wizard": "dist/bin.js"
+    "axonpush-wizard": "bin/axonpush-wizard.mjs"
   },
-  "main": "dist/index.js",
   "files": [
-    "dist",
-    "skills"
+    "bin"
   ],
-  "scripts": {
-    "build": "bun run scripts/build.ts",
-    "dev": "bun src/bin.ts",
-    "start": "bun dist/bin.js",
-    "typecheck": "tsc --noEmit"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/axonpush/wizard"
   },
+  "homepage": "https://github.com/axonpush/skills",
   "keywords": [
     "axonpush",
     "observability",
     "tracing",
-    "opentelemetry",
-    "otel",
-    "ai",
-    "agents",
     "ai-agents",
-    "llm",
-    "sdk",
+    "claude-code",
+    "cursor",
+    "codex",
+    "skills",
     "wizard",
-    "cli",
-    "langchain",
-    "langgraph",
-    "openai",
-    "openai-agents",
-    "anthropic",
-    "claude",
-    "vercel-ai",
-    "mastra",
-    "crewai",
-    "llamaindex",
-    "google-adk",
-    "logging",
-    "pino",
-    "winston",
-    "loguru",
-    "structlog",
-    "typescript",
-    "python"
+    "cli"
   ],
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.87",
-    "ink": "^6.8.0",
-    "ink-select-input": "^6.2.0",
-    "ink-spinner": "^5.0.0",
-    "ink-text-input": "^6.0.0",
-    "js-toml": "^1.0.3",
-    "react": "^19.2.4",
-    "yargs": "^17.7.2"
+  "engines": {
+    "node": ">=18"
   },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/react": "^19.2.14",
-    "@types/yargs": "^17.0.33",
-    "typescript": "^5.7.0"
-  }
+  "license": "MIT"
 }
