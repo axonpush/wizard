@@ -16,20 +16,26 @@ if (install.status !== 0) {
   process.exit(install.status ?? 1);
 }
 
+// Open the agent INTERACTIVELY so the skill can run its Q&A flow.
+// Pre-seeding a slash command via `-p` runs it once and exits — that
+// kills the back-and-forth the orchestrator skill needs.
 const agents = [
-  ["claude", ["-p", "/axonpush-integrate"]],
-  ["cursor", ["chat", "Run the axonpush-integrate skill"]],
-  ["codex", ["Run the axonpush-integrate skill"]],
+  ["claude", []],
+  ["cursor", ["chat"]],
+  ["codex", []],
 ];
 
 for (const [bin, agentArgs] of agents) {
   if (has(bin)) {
+    console.log(`\naxonpush skills installed. Opening ${bin} — type:`);
+    console.log(`  /axonpush-integrate`);
+    console.log(`to start the integration wizard.\n`);
     const result = spawnSync(bin, agentArgs, { stdio: "inherit" });
     process.exit(result.status ?? 0);
   }
 }
 
 console.log("\naxonpush skills installed.");
-console.log("Open your AI coding agent and ask:");
-console.log("  > Run the axonpush-integrate skill");
+console.log("Open your AI coding agent and type:");
+console.log("  /axonpush-integrate");
 console.log("\nSupported: Claude Code, Cursor, Codex, OpenCode, Cline, GitHub Copilot, Windsurf, Gemini, and 40+ others.");
