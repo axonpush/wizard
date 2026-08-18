@@ -1,6 +1,6 @@
 # @axonpush/wizard
 
-Launcher for the [AxonPush](https://axonpush.xyz) integration skills. Installs the [`axonpush/skills`](https://github.com/axonpush/skills) bundle into your AI coding agent (Claude Code, Cursor, Codex, OpenCode, Cline, GitHub Copilot, Windsurf, Gemini, and 40+ others) and runs the `axonpush-integrate` orchestrator against your project.
+Launcher for the [axonpush](https://axonpush.xyz) integration skills. Installs the [`axonpush/skills`](https://github.com/axonpush/skills) bundle into your AI coding agent (Claude Code, Cursor, Codex, OpenCode, Cline, GitHub Copilot, Windsurf, Gemini, and 40+ others) and runs the `axonpush-integrate` orchestrator against your project.
 
 ```bash
 npx @axonpush/wizard
