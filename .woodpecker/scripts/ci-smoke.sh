@@ -13,7 +13,7 @@ export RUNNER_TEMP="$(mktemp -d /tmp/woodpecker.XXXXXX)"
 export GITHUB_ENV="$RUNNER_TEMP/environment" GITHUB_OUTPUT="$RUNNER_TEMP/output"
 touch "$GITHUB_ENV" "$GITHUB_OUTPUT"
 export MISE_TRUSTED_CONFIG_PATHS="$CI_WORKSPACE"
-if [ "${WOODPECKER_TOOLS_READY:-}" != 1 ]; then
+if [ "${WOODPECKER_TOOLS_READY:-}" != 1 ] && [ "$(node -p 'process.versions.node.split(".")[0]')" != 22 ]; then
   tools=()
   tools+=(node@22)
   export WOODPECKER_TOOLS_READY=1
@@ -29,5 +29,5 @@ node -c bin/axonpush-wizard.mjs
 printf '%s\n' 'Step 4'
 (
   cd .
-node --test --experimental-test-coverage 2>/dev/null || true
+node --test --experimental-test-coverage
 )

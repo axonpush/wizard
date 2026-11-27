@@ -15,4 +15,4 @@ steps:
 - name: smoke
   image: localhost/woodpecker/toolbox:personal-3
   commands:
-  - timeout --kill-after=30s 360m bash .woodpecker/scripts/ci-smoke.sh
+  - timeout --kill-after=30s 5m bash .woodpecker/scripts/ci-smoke.sh
